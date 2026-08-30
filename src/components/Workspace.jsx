@@ -14,7 +14,25 @@ export default function Workspace({
   onSelectSubRegion,
   onOpenDetail,
 }) {
+  const workspaceRef = React.useRef(null);
   const globalNumbers = useMemo(() => buildGlobalNumberMap(subRegions), [subRegions]);
+
+  const canvasWidth = useMemo(() => {
+    const maxX = Math.max(0, ...subRegions.map((s) => s.x + 350));
+    return Math.max(2600, maxX + 800);
+  }, [subRegions]);
+
+  const canvasHeight = useMemo(() => {
+    const maxY = Math.max(0, ...subRegions.map((s) => s.y + 700));
+    return Math.max(1000, maxY + 400);
+  }, [subRegions]);
+
+  const handleWheel = (e) => {
+    // Permite rolar horizontalmente com a roda do mouse quando não estiver segurando shift
+    if (workspaceRef.current && e.deltaY && !e.shiftKey) {
+      workspaceRef.current.scrollLeft += e.deltaY * 0.85;
+    }
+  };
 
   const outputNodes = useMemo(() => {
     const result = [];
@@ -29,8 +47,8 @@ export default function Workspace({
   }, [subRegions]);
 
   return (
-    <main className="workspace">
-      <div className="workspace-grid" />
+    <main className="workspace" ref={workspaceRef} onWheel={handleWheel}>
+      <div className="workspace-grid" style={{ width: canvasWidth, minWidth: canvasWidth, height: canvasHeight }} />
 
       <div className="workspace-hint">
         <span className="hint-key">ARRASTE</span> sub-regiões para organizar
@@ -38,11 +56,15 @@ export default function Workspace({
         <span className="hint-key">⊕</span> abrir detalhes
         <span className="hint-separator">•</span>
         <span className="hint-key">CONECTE</span> dois terminais
+        <span className="hint-separator">•</span>
+        <span className="hint-key">SCROLL</span> navegue na horizontal
       </div>
 
       <ConnectionLayer
         subRegions={subRegions}
         connections={connections}
+        width={canvasWidth}
+        height={canvasHeight}
       />
 
       {subRegions.map((sub) => (

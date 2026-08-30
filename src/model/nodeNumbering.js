@@ -15,11 +15,56 @@ function centerOf(subRegion) {
   O número exibido de cada ponto deve ser reconstruído quando a estrutura muda.
 */
 export function sortSubRegions(subRegions) {
-  return [...subRegions].sort((a, b) => {
-    if (a.x !== b.x) return a.x - b.x;
-    if (a.y !== b.y) return b.y - a.y;
-    return a.id.localeCompare(b.id);
+  const groups = new Map();
+  const items = [];
+
+  for (const sub of subRegions) {
+    if (sub.groupId) {
+      if (!groups.has(sub.groupId)) {
+        groups.set(sub.groupId, []);
+      }
+      groups.get(sub.groupId).push(sub);
+    } else {
+      items.push({
+        type: 'single',
+        minX: sub.x,
+        minY: sub.y,
+        sub,
+      });
+    }
+  }
+
+  for (const [groupId, subs] of groups.entries()) {
+    const minX = Math.min(...subs.map((s) => s.x));
+    const minY = Math.min(...subs.map((s) => s.y));
+    // Ordena as subs da hélice internamente pela ordem estática de nascimento (heliceIndex: 1, 2, 3...)
+    const sortedSubs = [...subs].sort((a, b) => (a.heliceIndex || 0) - (b.heliceIndex || 0));
+    items.push({
+      type: 'group',
+      groupId,
+      minX,
+      minY,
+      subs: sortedSubs,
+    });
+  }
+
+  // Ordena os grupos e sub-regiões avulsas pela posição horizontal no canvas
+  items.sort((a, b) => {
+    if (a.minX !== b.minX) return a.minX - b.minX;
+    if (a.minY !== b.minY) return a.minY - b.minY;
+    return 0;
   });
+
+  const result = [];
+  for (const item of items) {
+    if (item.type === 'single') {
+      result.push(item.sub);
+    } else {
+      result.push(...item.subs);
+    }
+  }
+
+  return result;
 }
 
 export function buildGlobalNodeOrder(subRegions) {

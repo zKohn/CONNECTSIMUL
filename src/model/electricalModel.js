@@ -47,8 +47,13 @@ export function buildSubRegionNodes(subRegion) {
 function makeNode(subRegion, number, position, role, isOutput, upperOpening = false, polarity = null) {
   let effectivePolarity = polarity;
 
-  if (role === 'lower-opening') effectivePolarity = '-';
-  if (role === 'upper-opening') effectivePolarity = '+';
+  const topPol = subRegion.topPolarity === '-' ? '-' : '+';
+  const bottomPol = topPol === '+' ? '-' : '+';
+
+  // O topo de cada segmento (lower-opening) tem a polaridade do topo (+).
+  // A base de cada segmento (upper-opening) tem a polaridade da base (-).
+  if (role === 'lower-opening') effectivePolarity = topPol;
+  if (role === 'upper-opening') effectivePolarity = bottomPol;
 
   return {
     id: `${subRegion.id}:node:${position}:${role}`,
@@ -120,7 +125,16 @@ export function getBranchSegments(subRegion) {
   return segments;
 }
 
-export function createSubRegion({ id, name, x = 180, y = 120, branches = 4, topPolarity = '+' } = {}) {
+export function createSubRegion({
+  id,
+  name,
+  x = 180,
+  y = 120,
+  branches = 4,
+  topPolarity = '+',
+  groupId = null,
+  heliceIndex = null,
+} = {}) {
   return {
     id: id || `sub-${crypto.randomUUID()}`,
     name: name || 'SUB 01',
@@ -130,6 +144,8 @@ export function createSubRegion({ id, name, x = 180, y = 120, branches = 4, topP
     topPolarity: topPolarity === '-' ? '-' : '+',
     openings: [],
     visibleNodes: [],
+    groupId,
+    heliceIndex,
   };
 }
 

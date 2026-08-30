@@ -190,10 +190,30 @@ button {
   position: relative;
   flex: 1;
   min-width: 0;
-  overflow: auto;
+  overflow-x: auto;
+  overflow-y: hidden;
   background:
     radial-gradient(circle at 50% 50%, rgba(69, 214, 255, .025), transparent 45%),
     #080b0f;
+}
+
+.workspace::-webkit-scrollbar {
+  height: 10px;
+  width: 10px;
+}
+
+.workspace::-webkit-scrollbar-track {
+  background: #090c10;
+}
+
+.workspace::-webkit-scrollbar-thumb {
+  background: #1f2937;
+  border-radius: 6px;
+  border: 2px solid #090c10;
+}
+
+.workspace::-webkit-scrollbar-thumb:hover {
+  background: var(--cyan);
 }
 
 .workspace-grid {
@@ -366,19 +386,20 @@ button {
 
 .node-badge {
   position: absolute;
-  left: 110px;
+  left: 108px;
   top: 50%;
   transform: translateY(-50%);
-  min-width: 50px;
+  min-width: 54px;
   padding: 4px 8px;
-  border: 1px solid #27323d;
+  border: 1px solid #334155;
   border-radius: 6px;
-  background: #0b1015;
-  color: #aab6c1;
+  background: #090e14;
+  color: #f1f5f9;
   font-family: "JetBrains Mono", monospace;
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 700;
   text-align: center;
+  letter-spacing: 0.02em;
   transition: .16s ease;
 }
 
@@ -393,6 +414,13 @@ button {
   background: #081016;
   box-shadow: 0 0 10px rgba(69, 214, 255, .32);
   transition: .16s ease;
+}
+
+.node-dot.connected,
+.node-connected .node-dot {
+  background: #c8d6e5 !important;
+  border-color: #94a3b8 !important;
+  box-shadow: 0 0 6px rgba(200, 214, 229, .5), 0 0 12px rgba(69, 214, 255, .25) !important;
 }
 
 .node-dot.left {
@@ -425,8 +453,8 @@ button {
 
 .node-output:hover .node-badge {
   color: var(--cyan);
-  border-color: rgba(69, 214, 255, .45);
-  background: rgba(69, 214, 255, .08);
+  border-color: rgba(69, 214, 255, .6);
+  background: rgba(69, 214, 255, .12);
   transform: translateY(-50%) translateX(-3px);
 }
 
@@ -464,13 +492,13 @@ button {
   position: absolute;
   left: 80px;
   transform: translate(-50%, -50%);
-  padding: 3px 5px;
-  border: 1px solid rgba(255, 255, 255, .05);
-  border-radius: 4px;
-  background: #10161c;
-  color: #5f6c79;
+  padding: 2px 6px;
+  border: 1px solid rgba(69, 214, 255, .25);
+  border-radius: 5px;
+  background: #111822;
+  color: #94a3b8;
   font-family: "JetBrains Mono", monospace;
-  font-size: 8px;
+  font-size: 11px;
   font-weight: 700;
 }
 
@@ -512,9 +540,10 @@ button {
   right: 12px;
   display: flex;
   justify-content: space-between;
-  color: #596572;
+  color: #8fa3b8;
   font-family: "JetBrains Mono", monospace;
-  font-size: 8px;
+  font-size: 10px;
+  font-weight: 600;
 }
 
 .properties-panel {
@@ -966,13 +995,13 @@ td {
   position: absolute;
   left: 120px;
   transform: translate(-50%, -50%);
-  padding: 3px 5px;
-  border: 1px solid rgba(255, 255, 255, .05);
-  border-radius: 4px;
-  background: #10161c;
-  color: #5f6c79;
+  padding: 2px 6px;
+  border: 1px solid rgba(69, 214, 255, .25);
+  border-radius: 5px;
+  background: #111822;
+  color: #94a3b8;
   font-family: "JetBrains Mono", monospace;
-  font-size: 8px;
+  font-size: 11px;
   font-weight: 700;
 }
 
@@ -1047,22 +1076,22 @@ td {
   left: 150px;
   top: 50%;
   transform: translateY(-50%);
-  min-width: 50px;
+  min-width: 54px;
   padding: 4px 8px;
   border: 1px solid #1e2830;
   border-radius: 6px;
   background: #0b1015;
   color: #4a5663;
   font-family: "JetBrains Mono", monospace;
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 700;
   text-align: center;
   transition: .16s ease;
 }
 
 .detail-node-visible .detail-node-badge {
-  color: #aab6c1;
-  border-color: rgba(69, 214, 255, .25);
+  color: #f1f5f9;
+  border-color: rgba(69, 214, 255, .4);
 }
 
 /* ─── Detail Dots ─── */

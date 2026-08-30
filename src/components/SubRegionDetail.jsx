@@ -199,7 +199,7 @@ export default function SubRegionDetail({
             {visibleNodeIds.size} visíveis
           </span>
           <span>
-            {subRegion.openings.length}/{MAX_OPENINGS} aberturas
+            ✂ {subRegion.openings.length}/{MAX_OPENINGS} cortes
           </span>
         </div>
       </section>

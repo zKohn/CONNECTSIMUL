@@ -68,6 +68,15 @@ export default function SubRegion({
   const bottom = bodyHeight - BOTTOM_PADDING;
   const positions = visibleNodes.map((_, index) => bottom - index * NODE_SPACING);
 
+  const connectedNodeIds = useMemo(() => {
+    const set = new Set();
+    for (const conn of (connections || [])) {
+      if (conn.fromSubRegionId === subRegion.id) set.add(conn.from);
+      if (conn.toSubRegionId === subRegion.id) set.add(conn.to);
+    }
+    return set;
+  }, [connections, subRegion.id]);
+
   return (
     <section
       className="subregion"
@@ -122,6 +131,7 @@ export default function SubRegion({
             node={node}
             globalNumber={globalNumbers.get(node.id) ?? node.number}
             selected={selectedNodeId === node.id}
+            connected={connectedNodeIds.has(node.id)}
             onClick={onSelectNode}
             top={positions[index]}
           />
@@ -130,7 +140,7 @@ export default function SubRegion({
 
       <div className="subregion-footer">
         <span>{visibleNodes.length}/{allNodes.length} nós</span>
-        <span>{subRegion.openings.length} aberturas</span>
+        <span>✂ {subRegion.openings.length} cortes</span>
       </div>
     </section>
   );

@@ -60,8 +60,8 @@ export default function PropertiesPanel({ subRegion, onChange, onClose, onDelete
 
       <div className="property-card">
         <div>
-          <strong>{subRegion.openings.length}</strong>
-          <span>aberturas</span>
+          <strong>✂ {subRegion.openings.length}</strong>
+          <span>cortes / aberturas</span>
         </div>
         <div>
           <strong>{MAX_OPENINGS}</strong>
@@ -70,8 +70,8 @@ export default function PropertiesPanel({ subRegion, onChange, onClose, onDelete
       </div>
 
       <p className="hint">
-        Clique em um marcador entre duas ramas para abrir ou fechar a conexão.
-        Cada abertura cria dois nós independentes.
+        ✂ Clique em um marcador entre duas ramas para realizar um corte ou fechar a conexão.
+        Cada corte cria dois nós independentes.
       </p>
 
       <button className="btn btn-danger" style={{ width: '100%', marginTop: '20px' }} onClick={onDelete}>

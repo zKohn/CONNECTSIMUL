@@ -15,22 +15,23 @@ import {
   validateConnectivity,
 } from './model/connectivity';
 import SubRegionDetail from './components/SubRegionDetail';
+import MultiHeliceModal from './components/MultiHeliceModal';
 
 function initialSubRegions() {
   return [
     createSubRegion({
       id: 'sub-1',
       name: 'SUB 01',
-      x: 220,
-      y: 150,
+      x: 80,
+      y: 100,
       branches: 4,
       topPolarity: '+',
     }),
     createSubRegion({
       id: 'sub-2',
       name: 'SUB 02',
-      x: 650,
-      y: 250,
+      x: 340,
+      y: 100,
       branches: 5,
       topPolarity: '-',
     }),
@@ -43,6 +44,7 @@ export default function App() {
   const [selectedSubRegionId, setSelectedSubRegionId] = useState(null);
   const [selectedNode, setSelectedNode] = useState(null);
   const [showTable, setShowTable] = useState(false);
+  const [showMultiHeliceModal, setShowMultiHeliceModal] = useState(false);
   const [notice, setNotice] = useState(null);
   const [detailSubRegionId, setDetailSubRegionId] = useState(null);
 
@@ -65,13 +67,15 @@ export default function App() {
 
   function addSubRegion() {
     const index = subRegions.length + 1;
-    const offset = subRegions.length % 4;
+    const startX = subRegions.length > 0
+      ? Math.max(...subRegions.map((s) => s.x)) + 260
+      : 80;
 
     const sub = createSubRegion({
       id: `sub-${Date.now()}`,
       name: `SUB ${String(index).padStart(2, '0')}`,
-      x: 160 + offset * 300,
-      y: 140 + Math.floor(subRegions.length / 4) * 420,
+      x: startX,
+      y: 100,
       branches: 4,
       topPolarity: '+',
     });
@@ -79,6 +83,78 @@ export default function App() {
     setSubRegions((current) => [...current, sub]);
     setSelectedSubRegionId(sub.id);
     setSelectedNode(null);
+  }
+
+  function addMultiHeliceSubRegion(count, prefix = 'HÉLICE', topPolarity = '+') {
+    const num = Math.max(1, Math.min(64, Number(count) || 8));
+    const startX = subRegions.length > 0
+      ? Math.max(...subRegions.map((s) => s.x)) + 260
+      : 80;
+    const fixedY = 100;
+
+    // Ordem de disposição das hélices: 1, N, 2, N-1, 3, N-2, ...
+    const heliceOrder = [];
+    let left = 1;
+    let right = num;
+    while (left <= right) {
+      heliceOrder.push(left);
+      if (left !== right) {
+        heliceOrder.push(right);
+      }
+      left++;
+      right--;
+    }
+
+    const groupId = `helice-group-${Date.now()}`;
+
+    const newSubs = [];
+    for (let i = 0; i < heliceOrder.length; i++) {
+      const heliceNum = heliceOrder[i];
+      newSubs.push(
+        createSubRegion({
+          id: `sub-helice-${Date.now()}-${i}-${heliceNum}`,
+          name: `${prefix} ${String(heliceNum).padStart(2, '0')}`,
+          x: startX + i * 250,
+          y: fixedY,
+          branches: 1,
+          topPolarity: topPolarity,
+          groupId,
+          heliceIndex: heliceNum,
+        })
+      );
+    }
+
+    // Realizar as ligações do (-) da hélice anterior ao (+) da hélice seguinte na sequência
+    const newConnections = [];
+    for (let i = 0; i < newSubs.length - 1; i++) {
+      const currentSub = newSubs[i];
+      const nextSub = newSubs[i + 1];
+
+      const currentNodes = buildSubRegionNodes(currentSub);
+      const nextNodes = buildSubRegionNodes(nextSub);
+
+      // Ponto (-) da hélice atual
+      const fromNode = currentNodes.find((n) => n.polarity === '-' || n.position === 0);
+      // Ponto (+) da próxima hélice
+      const toNode = nextNodes.find((n) => n.polarity === '+' || n.position === 1);
+
+      if (fromNode && toNode) {
+        newConnections.push({
+          id: `connection-${Date.now()}-${i}`,
+          from: fromNode.id,
+          to: toNode.id,
+          fromSubRegionId: currentSub.id,
+          toSubRegionId: nextSub.id,
+          fromNumber: fromNode.number,
+          toNumber: toNode.number,
+        });
+      }
+    }
+
+    setSubRegions((current) => [...current, ...newSubs]);
+    setConnections((current) => [...current, ...newConnections]);
+    setSelectedNode(null);
+    setNotice(`${num} sub-regiões hélice criadas na sequência 1, N, 2, N-1... com ligações automáticas (-) → (+).`);
   }
 
   function updateSubRegion(nextSub) {
@@ -151,11 +227,6 @@ export default function App() {
     const toSub = subRegions.find((sub) => sub.id === node.subRegionId);
 
     if (!fromSub || !toSub) return;
-
-    if (fromSub.id === toSub.id) {
-      setNotice('A conexão externa deve ligar pontos de sub-regiões diferentes.');
-      return;
-    }
 
     const alreadyConnected = connections.some((connection) => {
       return (
@@ -254,6 +325,7 @@ export default function App() {
     <div className="app-shell">
       <Toolbar
         onAddSubRegion={addSubRegion}
+        onOpenMultiHeliceModal={() => setShowMultiHeliceModal(true)}
         onDeleteConnection={deleteConnectionsForSelectedNode}
         onClearSelection={() => {
           setSelectedNode(null);
@@ -297,6 +369,13 @@ export default function App() {
         <ConnectionTable
           rows={rows}
           onClose={() => setShowTable(false)}
+        />
+      )}
+
+      {showMultiHeliceModal && (
+        <MultiHeliceModal
+          onClose={() => setShowMultiHeliceModal(false)}
+          onCreate={addMultiHeliceSubRegion}
         />
       )}
 

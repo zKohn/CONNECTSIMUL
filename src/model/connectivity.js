@@ -1,4 +1,4 @@
-import { buildGlobalNodeOrder } from './nodeNumbering';
+import { buildGlobalNodeOrder, buildGlobalNumberMap } from './nodeNumbering';
 
 export function createUnionFind(items) {
   const parent = new Map();
@@ -115,17 +115,17 @@ export function validateConnectivity(subRegions, externalConnections) {
 }
 
 export function buildTableRows(subRegions, externalConnections) {
-  const allNodes = buildGlobalNodeOrder(subRegions);
-  const groups = buildConnectivity(subRegions, externalConnections);
-  const index = new Map(allNodes.map((node, i) => [node.id, i + 1]));
+  const globalNumberMap = buildGlobalNumberMap(subRegions);
 
-  return groups.map((group, i) => ({
-    id: `potential-${i + 1}`,
-    points: group
-      .map((nodeId) => index.get(nodeId))
-      .filter(Boolean)
-      .sort((a, b) => a - b),
-  }));
+  return externalConnections.map((conn, index) => {
+    const fromNum = globalNumberMap.get(conn.from);
+    const toNum = globalNumberMap.get(conn.to);
+
+    return {
+      id: conn.id || `connection-row-${index + 1}`,
+      points: [fromNum, toNum].filter((n) => n != null),
+    };
+  });
 }
 
 export function exportRowsToCsv(rows) {

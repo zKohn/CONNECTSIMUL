@@ -2,6 +2,7 @@ import React from 'react';
 
 export default function Toolbar({
   onAddSubRegion,
+  onOpenMultiHeliceModal,
   onDeleteConnection,
   onClearSelection,
   onExport,
@@ -20,8 +21,11 @@ export default function Toolbar({
       </div>
 
       <div className="toolbar-actions">
-        <button className="btn btn-primary" onClick={onAddSubRegion}>
+        <button className="btn btn-primary" onClick={onAddSubRegion} title="Adicionar uma sub-região padrão">
           <span>＋</span> Sub-região
+        </button>
+        <button className="btn btn-accent" onClick={onOpenMultiHeliceModal} title="Adicionar sequência de sub-regiões de 1 rama e 2 nós">
+          <span>＋</span> Hélice Múltipla
         </button>
         <button className="btn" onClick={onClearSelection} disabled={!selectedNode}>
           Limpar seleção
@@ -32,7 +36,7 @@ export default function Toolbar({
         <button className="btn" onClick={onOpenTable}>
           Tabela
         </button>
-        <button className="btn btn-accent" onClick={onExport}>
+        <button className="btn" onClick={onExport}>
           Exportar CSV
         </button>
       </div>
