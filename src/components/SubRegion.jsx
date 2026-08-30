@@ -134,7 +134,6 @@ export default function SubRegion({
             globalNumber={globalNumbers.get(node.id) ?? node.number}
             selected={selectedNodeId === node.id}
             connected={connectedNodeIds.has(node.id)}
-            isCenter={isCenterNode(node, subRegion)}
             onClick={onSelectNode}
             top={positions[index]}
           />

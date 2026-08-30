@@ -120,14 +120,14 @@ export default function SubRegionDetail({
                       isEssential
                         ? 'Ponto essencial (sempre visível)'
                         : isCenter
-                          ? 'Ponto central (sempre visível)'
+                          ? 'Nó central • Alternar visibilidade na tela principal'
                           : 'Alternar visibilidade na tela principal'
                     }
                   >
                     <input
                       type="checkbox"
                       checked={isVisible}
-                      disabled={isEssential || isCenter}
+                      disabled={isEssential}
                       onChange={() =>
                         onToggleNodeVisibility(subRegion.id, node.id)
                       }
@@ -141,7 +141,7 @@ export default function SubRegionDetail({
                     {node.polarity
                       ? `${node.polarity}${globalNum}`
                       : globalNum}
-                    {isCenter && <span className="center-tag" title="Nó Central">●</span>}
+                    {isCenter && <span className="center-tag" title="Nó Central">● Centro</span>}
                   </span>
 
                   <span className={`detail-dot right ${isCenter ? 'center-dot' : ''}`} />

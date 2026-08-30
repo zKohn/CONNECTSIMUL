@@ -97,7 +97,6 @@ export function getVisibleNodes(subRegion, connections = []) {
 
   return allNodes.filter((node, index) => {
     if (index === 0 || index === allNodes.length - 1) return true;
-    if (isCenterNode(node, subRegion)) return true;
     if (node.role === 'lower-opening' || node.role === 'upper-opening') return true;
     if (connectedNodeIds.has(node.id)) return true;
     if (explicitlyVisible.has(node.id)) return true;
