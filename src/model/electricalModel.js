@@ -76,6 +76,14 @@ export function getOutputNodes(subRegion) {
   return buildSubRegionNodes(subRegion).filter((node) => node.isOutput);
 }
 
+export function isCenterNode(node, subRegion) {
+  const branches = clampBranches(subRegion.branches);
+  if (branches % 2 === 0) {
+    return node.position === branches / 2;
+  }
+  return node.position === Math.floor(branches / 2) || node.position === Math.ceil(branches / 2);
+}
+
 export function getVisibleNodes(subRegion, connections = []) {
   const allNodes = buildSubRegionNodes(subRegion);
 
@@ -89,6 +97,7 @@ export function getVisibleNodes(subRegion, connections = []) {
 
   return allNodes.filter((node, index) => {
     if (index === 0 || index === allNodes.length - 1) return true;
+    if (isCenterNode(node, subRegion)) return true;
     if (node.role === 'lower-opening' || node.role === 'upper-opening') return true;
     if (connectedNodeIds.has(node.id)) return true;
     if (explicitlyVisible.has(node.id)) return true;

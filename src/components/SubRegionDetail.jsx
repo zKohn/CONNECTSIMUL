@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { buildSubRegionNodes, getVisibleNodes, MAX_OPENINGS } from '../model/electricalModel';
+import { buildSubRegionNodes, getVisibleNodes, isCenterNode, MAX_OPENINGS } from '../model/electricalModel';
 
 const NODE_SPACING = 30;
 const TOP_PADDING = 28;
@@ -105,13 +105,13 @@ export default function SubRegionDetail({
             {nodes.map((node, index) => {
               const isEssential = essentialNodeIds.has(node.id);
               const isVisible = visibleNodeIds.has(node.id);
+              const isCenter = isCenterNode(node, subRegion);
               const globalNum = globalNumbers.get(node.id) ?? node.number;
 
               return (
                 <div
                   key={node.id}
-                  className={`detail-node-row ${isVisible ? 'detail-node-visible' : ''
-                    }`}
+                  className={`detail-node-row ${isVisible ? 'detail-node-visible' : ''} ${isCenter ? 'detail-node-center' : ''}`}
                   style={{ top: positions[index] }}
                 >
                   <label
@@ -119,13 +119,15 @@ export default function SubRegionDetail({
                     title={
                       isEssential
                         ? 'Ponto essencial (sempre visível)'
-                        : 'Alternar visibilidade na tela principal'
+                        : isCenter
+                          ? 'Ponto central (sempre visível)'
+                          : 'Alternar visibilidade na tela principal'
                     }
                   >
                     <input
                       type="checkbox"
                       checked={isVisible}
-                      disabled={isEssential}
+                      disabled={isEssential || isCenter}
                       onChange={() =>
                         onToggleNodeVisibility(subRegion.id, node.id)
                       }
@@ -133,15 +135,16 @@ export default function SubRegionDetail({
                     <span className="detail-checkmark" />
                   </label>
 
-                  <span className="detail-dot left" />
+                  <span className={`detail-dot left ${isCenter ? 'center-dot' : ''}`} />
 
-                  <span className="detail-node-badge">
+                  <span className={`detail-node-badge ${isCenter ? 'badge-center' : ''}`}>
                     {node.polarity
                       ? `${node.polarity}${globalNum}`
                       : globalNum}
+                    {isCenter && <span className="center-tag" title="Nó Central">●</span>}
                   </span>
 
-                  <span className="detail-dot right" />
+                  <span className={`detail-dot right ${isCenter ? 'center-dot' : ''}`} />
                 </div>
               );
             })}

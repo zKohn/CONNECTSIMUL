@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { buildSubRegionNodes, getVisibleNodes } from '../model/electricalModel';
+import { buildSubRegionNodes, getVisibleNodes, isCenterNode } from '../model/electricalModel';
 import NodeTerminal from './NodeTerminal';
 
 const WIDTH = 220;
@@ -134,6 +134,7 @@ export default function SubRegion({
             globalNumber={globalNumbers.get(node.id) ?? node.number}
             selected={selectedNodeId === node.id}
             connected={connectedNodeIds.has(node.id)}
+            isCenter={isCenterNode(node, subRegion)}
             onClick={onSelectNode}
             top={positions[index]}
           />

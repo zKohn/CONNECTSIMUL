@@ -423,6 +423,22 @@ button {
   transition: .16s ease;
 }
 
+.badge-center {
+  border-color: rgba(255, 200, 87, 0.7) !important;
+  background: #141108 !important;
+  color: #ffe699 !important;
+  box-shadow: 0 0 10px rgba(255, 200, 87, 0.25);
+}
+
+.center-tag {
+  display: inline-block;
+  margin-left: 4px;
+  font-size: 8px;
+  color: var(--amber);
+  vertical-align: middle;
+  text-shadow: 0 0 6px rgba(255, 200, 87, 0.8);
+}
+
 .node-dot {
   position: absolute;
   top: 50%;
@@ -434,6 +450,11 @@ button {
   background: #081016;
   box-shadow: 0 0 10px rgba(69, 214, 255, .32);
   transition: .16s ease;
+}
+
+.center-dot:not(.connected) {
+  border-color: var(--amber) !important;
+  box-shadow: 0 0 10px rgba(255, 200, 87, 0.45);
 }
 
 .node-dot.connected,
