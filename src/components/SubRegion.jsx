@@ -51,6 +51,7 @@ export default function SubRegion({
   connections,
   onSelectNode,
   onUpdatePosition,
+  onCommitPosition,
   onSelectSubRegion,
   onOpenDetail,
 }) {
@@ -92,6 +93,7 @@ export default function SubRegion({
         const up = () => {
           window.removeEventListener('pointermove', move);
           window.removeEventListener('pointerup', up);
+          if (onCommitPosition) onCommitPosition();
         };
         window.addEventListener('pointermove', move);
         window.addEventListener('pointerup', up);

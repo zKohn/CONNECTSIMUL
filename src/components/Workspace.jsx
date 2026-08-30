@@ -11,6 +11,7 @@ export default function Workspace({
   selectedSubRegionId,
   onSelectNode,
   onUpdatePosition,
+  onCommitPosition,
   onSelectSubRegion,
   onOpenDetail,
 }) {
@@ -76,6 +77,7 @@ export default function Workspace({
           selectedNodeId={selectedNode?.id}
           onSelectNode={onSelectNode}
           onUpdatePosition={onUpdatePosition}
+          onCommitPosition={onCommitPosition}
           onSelectSubRegion={onSelectSubRegion}
           onOpenDetail={onOpenDetail}
         />

@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useCallback } from 'react';
 import Toolbar from './components/Toolbar';
 import Workspace from './components/Workspace';
 import PropertiesPanel from './components/PropertiesPanel';
@@ -16,31 +16,46 @@ import {
 } from './model/connectivity';
 import SubRegionDetail from './components/SubRegionDetail';
 import MultiHeliceModal from './components/MultiHeliceModal';
+import { useHistory } from './hooks/useHistory';
 
-function initialSubRegions() {
-  return [
-    createSubRegion({
-      id: 'sub-1',
-      name: 'SUB 01',
-      x: 80,
-      y: 100,
-      branches: 4,
-      topPolarity: '+',
-    }),
-    createSubRegion({
-      id: 'sub-2',
-      name: 'SUB 02',
-      x: 340,
-      y: 100,
-      branches: 5,
-      topPolarity: '-',
-    }),
-  ];
+function makeInitialState() {
+  return {
+    subRegions: [
+      createSubRegion({
+        id: 'sub-1',
+        name: 'SUB 01',
+        x: 80,
+        y: 100,
+        branches: 4,
+        topPolarity: '+',
+      }),
+      createSubRegion({
+        id: 'sub-2',
+        name: 'SUB 02',
+        x: 340,
+        y: 100,
+        branches: 5,
+        topPolarity: '-',
+      }),
+    ],
+    connections: [],
+  };
 }
 
 export default function App() {
-  const [subRegions, setSubRegions] = useState(initialSubRegions);
-  const [connections, setConnections] = useState([]);
+  const {
+    state,
+    setState,
+    setStateNoHistory,
+    commit,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
+  } = useHistory(makeInitialState());
+
+  const { subRegions, connections } = state;
+
   const [selectedSubRegionId, setSelectedSubRegionId] = useState(null);
   const [selectedNode, setSelectedNode] = useState(null);
   const [showTable, setShowTable] = useState(false);
@@ -65,6 +80,36 @@ export default function App() {
 
   const selectedSubRegion = subRegions.find((s) => s.id === selectedSubRegionId) || null;
 
+  // ── Keyboard shortcuts ──────────────────────────────────────────────────────
+  React.useEffect(() => {
+    function handleKeyDown(e) {
+      // Undo: Ctrl+Z
+      if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+        e.preventDefault();
+        undo();
+        return;
+      }
+      // Redo: Ctrl+Y or Ctrl+Shift+Z
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) {
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+        e.preventDefault();
+        redo();
+        return;
+      }
+      // Delete sub-region
+      if (e.key === 'Delete' && selectedSubRegionId) {
+        if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
+          deleteSubRegion(selectedSubRegionId);
+        }
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedSubRegionId, undo, redo]);
+
+  // ── Handlers ────────────────────────────────────────────────────────────────
+
   function addSubRegion() {
     const index = subRegions.length + 1;
     const startX = subRegions.length > 0
@@ -80,7 +125,7 @@ export default function App() {
       topPolarity: '+',
     });
 
-    setSubRegions((current) => [...current, sub]);
+    setState((prev) => ({ ...prev, subRegions: [...prev.subRegions, sub] }));
     setSelectedSubRegionId(sub.id);
     setSelectedNode(null);
   }
@@ -92,15 +137,12 @@ export default function App() {
       : 80;
     const fixedY = 100;
 
-    // Ordem de disposição das hélices: 1, N, 2, N-1, 3, N-2, ...
     const heliceOrder = [];
     let left = 1;
     let right = num;
     while (left <= right) {
       heliceOrder.push(left);
-      if (left !== right) {
-        heliceOrder.push(right);
-      }
+      if (left !== right) heliceOrder.push(right);
       left++;
       right--;
     }
@@ -124,20 +166,14 @@ export default function App() {
       );
     }
 
-    // Realizar as ligações do (-) da hélice anterior ao (+) da hélice seguinte na sequência
     const newConnections = [];
     for (let i = 0; i < newSubs.length - 1; i++) {
       const currentSub = newSubs[i];
       const nextSub = newSubs[i + 1];
-
       const currentNodes = buildSubRegionNodes(currentSub);
       const nextNodes = buildSubRegionNodes(nextSub);
-
-      // Ponto (-) da hélice atual
       const fromNode = currentNodes.find((n) => n.polarity === '-' || n.position === 0);
-      // Ponto (+) da próxima hélice
       const toNode = nextNodes.find((n) => n.polarity === '+' || n.position === 1);
-
       if (fromNode && toNode) {
         newConnections.push({
           id: `connection-${Date.now()}-${i}`,
@@ -151,8 +187,10 @@ export default function App() {
       }
     }
 
-    setSubRegions((current) => [...current, ...newSubs]);
-    setConnections((current) => [...current, ...newConnections]);
+    setState((prev) => ({
+      subRegions: [...prev.subRegions, ...newSubs],
+      connections: [...prev.connections, ...newConnections],
+    }));
     setSelectedNode(null);
     setNotice(`${num} sub-regiões hélice criadas na sequência 1, N, 2, N-1... com ligações automáticas (-) → (+).`);
   }
@@ -164,49 +202,38 @@ export default function App() {
       visibleNodes: (nextSub.visibleNodes || []).filter((id) => validNodeIds.has(id)),
     };
 
-    setSubRegions((current) =>
-      current.map((sub) => sub.id === cleanedSub.id ? cleanedSub : sub)
-    );
-
-    setConnections((current) =>
-      current.filter((connection) => validNodeIds.has(connection.from) || connection.fromSubRegionId !== cleanedSub.id)
-        .filter((connection) => validNodeIds.has(connection.to) || connection.toSubRegionId !== cleanedSub.id)
-    );
+    setState((prev) => ({
+      subRegions: prev.subRegions.map((sub) => sub.id === cleanedSub.id ? cleanedSub : sub),
+      connections: prev.connections
+        .filter((c) => validNodeIds.has(c.from) || c.fromSubRegionId !== cleanedSub.id)
+        .filter((c) => validNodeIds.has(c.to) || c.toSubRegionId !== cleanedSub.id),
+    }));
   }
 
+  /** Chamado enquanto arrasta — sem registrar no histórico */
   function updatePosition(id, x, y) {
-    setSubRegions((current) =>
-      current.map((sub) =>
-        sub.id === id
-          ? { ...sub, x: Math.max(30, x), y: Math.max(80, y) }
-          : sub
-      )
-    );
+    setStateNoHistory((prev) => ({
+      ...prev,
+      subRegions: prev.subRegions.map((sub) =>
+        sub.id === id ? { ...sub, x: Math.max(30, x), y: Math.max(80, y) } : sub
+      ),
+    }));
+  }
+
+  /** Chamado ao soltar o drag — salva snapshot */
+  function commitPosition() {
+    commit();
   }
 
   function deleteSubRegion(id) {
-    setSubRegions((current) => current.filter((sub) => sub.id !== id));
-    setConnections((current) =>
-      current.filter(
+    setState((prev) => ({
+      subRegions: prev.subRegions.filter((sub) => sub.id !== id),
+      connections: prev.connections.filter(
         (conn) => conn.fromSubRegionId !== id && conn.toSubRegionId !== id
-      )
-    );
-    if (selectedSubRegionId === id) {
-      setSelectedSubRegionId(null);
-    }
+      ),
+    }));
+    if (selectedSubRegionId === id) setSelectedSubRegionId(null);
   }
-
-  React.useEffect(() => {
-    function handleKeyDown(e) {
-      if (e.key === 'Delete' && selectedSubRegionId) {
-        if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
-          deleteSubRegion(selectedSubRegionId);
-        }
-      }
-    }
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedSubRegionId]);
 
   function selectNode(node) {
     if (!node.isOutput) return;
@@ -251,40 +278,38 @@ export default function App() {
       toNumber: node.number,
     };
 
-    setConnections((current) => [...current, connection]);
+    setState((prev) => ({ ...prev, connections: [...prev.connections, connection] }));
     setSelectedNode(null);
     setNotice('Conexão criada.');
   }
 
   function deleteConnectionsForSelectedNode() {
     if (!selectedNode) return;
-
-    setConnections((current) =>
-      current.filter(
-        (connection) =>
-          connection.from !== selectedNode.id &&
-          connection.to !== selectedNode.id
-      )
-    );
-
+    setState((prev) => ({
+      ...prev,
+      connections: prev.connections.filter(
+        (c) => c.from !== selectedNode.id && c.to !== selectedNode.id
+      ),
+    }));
     setSelectedNode(null);
     setNotice('Conexões do ponto removidas.');
   }
 
   function toggleSubOpening(subId, position) {
-    setSubRegions((current) =>
-      current.map((sub) =>
+    setState((prev) => ({
+      ...prev,
+      subRegions: prev.subRegions.map((sub) =>
         sub.id === subId ? toggleOpening(sub, position) : sub
-      )
-    );
-
+      ),
+    }));
     setSelectedNode(null);
     setNotice(`Abertura entre ramas ${position} e ${position + 1} atualizada.`);
   }
 
   function toggleNodeVisibility(subId, nodeId) {
-    setSubRegions((current) =>
-      current.map((sub) => {
+    setState((prev) => ({
+      ...prev,
+      subRegions: prev.subRegions.map((sub) => {
         if (sub.id !== subId) return sub;
         const visibleNodes = sub.visibleNodes || [];
         const has = visibleNodes.includes(nodeId);
@@ -294,29 +319,22 @@ export default function App() {
             ? visibleNodes.filter((id) => id !== nodeId)
             : [...visibleNodes, nodeId],
         };
-      })
-    );
+      }),
+    }));
   }
 
   const detailSubRegion = subRegions.find((s) => s.id === detailSubRegionId) || null;
 
   function exportCsv() {
     const errors = validateConnectivity(subRegions, connections);
-
-    if (errors.length) {
-      setNotice(errors[0]);
-      return;
-    }
-
+    if (errors.length) { setNotice(errors[0]); return; }
     const csv = exportRowsToCsv(rows);
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement('a');
-
     anchor.href = url;
     anchor.download = 'conexoes_eletricas.csv';
     anchor.click();
-
     URL.revokeObjectURL(url);
     setNotice('CSV exportado com sucesso.');
   }
@@ -327,14 +345,15 @@ export default function App() {
         onAddSubRegion={addSubRegion}
         onOpenMultiHeliceModal={() => setShowMultiHeliceModal(true)}
         onDeleteConnection={deleteConnectionsForSelectedNode}
-        onClearSelection={() => {
-          setSelectedNode(null);
-          setNotice(null);
-        }}
+        onClearSelection={() => { setSelectedNode(null); setNotice(null); }}
         onExport={exportCsv}
         connectionMode={Boolean(selectedNode)}
         selectedNode={selectedNode}
         onOpenTable={() => setShowTable(true)}
+        onUndo={undo}
+        onRedo={redo}
+        canUndo={canUndo}
+        canRedo={canRedo}
       />
 
       <div className="app-main">
@@ -345,6 +364,7 @@ export default function App() {
           selectedSubRegionId={selectedSubRegionId}
           onSelectNode={selectNode}
           onUpdatePosition={updatePosition}
+          onCommitPosition={commitPosition}
           onSelectSubRegion={setSelectedSubRegionId}
           onOpenDetail={setDetailSubRegionId}
         />
@@ -393,3 +413,4 @@ export default function App() {
     </div>
   );
 }
+

@@ -9,6 +9,10 @@ export default function Toolbar({
   connectionMode,
   selectedNode,
   onOpenTable,
+  onUndo,
+  onRedo,
+  canUndo,
+  canRedo,
 }) {
   return (
     <header className="topbar">
@@ -27,6 +31,28 @@ export default function Toolbar({
         <button className="btn btn-accent" onClick={onOpenMultiHeliceModal} title="Adicionar sequência de sub-regiões de 1 rama e 2 nós">
           <span>＋</span> Hélice Múltipla
         </button>
+
+        <div className="toolbar-divider" />
+
+        <button
+          className="btn btn-ghost"
+          onClick={onUndo}
+          disabled={!canUndo}
+          title="Desfazer (Ctrl+Z)"
+        >
+          ↩ Desfazer
+        </button>
+        <button
+          className="btn btn-ghost"
+          onClick={onRedo}
+          disabled={!canRedo}
+          title="Refazer (Ctrl+Y)"
+        >
+          ↪ Refazer
+        </button>
+
+        <div className="toolbar-divider" />
+
         <button className="btn" onClick={onClearSelection} disabled={!selectedNode}>
           Limpar seleção
         </button>
