@@ -116,14 +116,17 @@ export function validateConnectivity(subRegions, externalConnections) {
 
 export function buildTableRows(subRegions, externalConnections) {
   const globalNumberMap = buildGlobalNumberMap(subRegions);
+  const groups = buildConnectivity(subRegions, externalConnections);
 
-  return externalConnections.map((conn, index) => {
-    const fromNum = globalNumberMap.get(conn.from);
-    const toNum = globalNumberMap.get(conn.to);
+  return groups.map((group, index) => {
+    const points = group
+      .map((nodeId) => globalNumberMap.get(nodeId))
+      .filter((n) => n != null)
+      .sort((a, b) => a - b);
 
     return {
-      id: conn.id || `connection-row-${index + 1}`,
-      points: [fromNum, toNum].filter((n) => n != null),
+      id: `potential-row-${index + 1}`,
+      points,
     };
   });
 }
