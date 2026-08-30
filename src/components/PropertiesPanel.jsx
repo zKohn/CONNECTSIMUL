@@ -1,13 +1,60 @@
 import React from 'react';
 import { MAX_OPENINGS, resizeBranches } from '../model/electricalModel';
 
-export default function PropertiesPanel({ subRegion, onChange, onClose, onDelete }) {
+export default function PropertiesPanel({ subRegion, onChange, onClose, onDelete, onOpenGroupDetail }) {
   if (!subRegion) {
     return (
       <aside className="properties-panel empty-panel">
         <div className="panel-icon">⌁</div>
         <h2>Nenhuma sub-região selecionada</h2>
         <p>Selecione um retângulo para editar ramas, polaridade e demais propriedades.</p>
+      </aside>
+    );
+  }
+
+  if (subRegion.isGroup) {
+    return (
+      <aside className="properties-panel">
+        <div className="panel-title-row">
+          <div>
+            <span className="eyebrow" style={{ color: 'var(--green)' }}>HÉLICE MÚLTIPLA</span>
+            <h2>{subRegion.name}</h2>
+          </div>
+          <button className="icon-btn" onClick={onClose} aria-label="Fechar">×</button>
+        </div>
+
+        <div className="property-card" style={{ marginTop: '16px' }}>
+          <div>
+            <strong style={{ color: 'var(--green)' }}>{subRegion.branches}</strong>
+            <span>hélices em série</span>
+          </div>
+          <div>
+            <strong>2</strong>
+            <span>nós externos</span>
+          </div>
+        </div>
+
+        <p className="hint">
+          As conexões internas entre as {subRegion.branches} hélices foram geradas automaticamente na sequência (1, N, 2, N-1...). Apenas os 2 nós externos ficam visíveis na tela principal.
+        </p>
+
+        {onOpenGroupDetail && (
+          <button
+            className="btn btn-accent"
+            style={{ width: '100%', marginTop: '12px' }}
+            onClick={() => onOpenGroupDetail(subRegion.id)}
+          >
+            ⊕ Ver Detalhes da Cadeia
+          </button>
+        )}
+
+        <button
+          className="btn btn-danger"
+          style={{ width: '100%', marginTop: '20px' }}
+          onClick={onDelete}
+        >
+          Deletar Hélice Múltipla
+        </button>
       </aside>
     );
   }

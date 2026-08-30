@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import SubRegion from './SubRegion';
+import MultiHeliceGroup, { getMultiHeliceExternalNodes } from './MultiHeliceGroup';
 import ConnectionLayer from './ConnectionLayer';
 import { buildSubRegionNodes } from '../model/electricalModel';
 import { buildGlobalNumberMap } from '../model/nodeNumbering';
@@ -14,9 +15,28 @@ export default function Workspace({
   onCommitPosition,
   onSelectSubRegion,
   onOpenDetail,
+  onOpenMultiHeliceDetail,
 }) {
   const workspaceRef = React.useRef(null);
   const globalNumbers = useMemo(() => buildGlobalNumberMap(subRegions), [subRegions]);
+
+  const { singles, groups } = useMemo(() => {
+    const singleList = [];
+    const groupMap = new Map();
+
+    for (const sub of subRegions) {
+      if (sub.groupId) {
+        if (!groupMap.has(sub.groupId)) {
+          groupMap.set(sub.groupId, []);
+        }
+        groupMap.get(sub.groupId).push(sub);
+      } else {
+        singleList.push(sub);
+      }
+    }
+
+    return { singles: singleList, groups: Array.from(groupMap.entries()) };
+  }, [subRegions]);
 
   const canvasWidth = useMemo(() => {
     const maxX = Math.max(0, ...subRegions.map((s) => s.x + 350));
@@ -37,15 +57,19 @@ export default function Workspace({
 
   const outputNodes = useMemo(() => {
     const result = [];
-    for (const sub of subRegions) {
+    for (const sub of singles) {
       for (const node of buildSubRegionNodes(sub)) {
         if (node.isOutput) {
           result.push({ ...node, subRegionName: sub.name });
         }
       }
     }
+    for (const [, subs] of groups) {
+      const ext = getMultiHeliceExternalNodes(subs, connections);
+      result.push(...ext);
+    }
     return result;
-  }, [subRegions]);
+  }, [singles, groups, connections]);
 
   return (
     <main className="workspace" ref={workspaceRef} onWheel={handleWheel}>
@@ -68,7 +92,7 @@ export default function Workspace({
         height={canvasHeight}
       />
 
-      {subRegions.map((sub) => (
+      {singles.map((sub) => (
         <SubRegion
           key={sub.id}
           subRegion={sub}
@@ -80,6 +104,22 @@ export default function Workspace({
           onCommitPosition={onCommitPosition}
           onSelectSubRegion={onSelectSubRegion}
           onOpenDetail={onOpenDetail}
+        />
+      ))}
+
+      {groups.map(([groupId, subs]) => (
+        <MultiHeliceGroup
+          key={groupId}
+          groupId={groupId}
+          subs={subs}
+          globalNumbers={globalNumbers}
+          connections={connections}
+          selectedNodeId={selectedNode?.id}
+          onSelectNode={onSelectNode}
+          onUpdatePosition={onUpdatePosition}
+          onCommitPosition={onCommitPosition}
+          onSelectGroup={onSelectSubRegion}
+          onOpenDetail={onOpenMultiHeliceDetail}
         />
       ))}
 

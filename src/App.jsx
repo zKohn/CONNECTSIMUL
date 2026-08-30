@@ -16,6 +16,7 @@ import {
 } from './model/connectivity';
 import SubRegionDetail from './components/SubRegionDetail';
 import MultiHeliceModal from './components/MultiHeliceModal';
+import MultiHeliceDetail from './components/MultiHeliceDetail';
 import { useHistory } from './hooks/useHistory';
 
 function makeInitialState() {
@@ -62,6 +63,7 @@ export default function App() {
   const [showMultiHeliceModal, setShowMultiHeliceModal] = useState(false);
   const [notice, setNotice] = useState(null);
   const [detailSubRegionId, setDetailSubRegionId] = useState(null);
+  const [detailMultiHeliceGroupId, setDetailMultiHeliceGroupId] = useState(null);
 
   const globalNumbers = useMemo(
     () => buildGlobalNumberMap(subRegions),
@@ -78,7 +80,24 @@ export default function App() {
     [subRegions, connections]
   );
 
-  const selectedSubRegion = subRegions.find((s) => s.id === selectedSubRegionId) || null;
+  const selectedSubRegion = useMemo(() => {
+    if (!selectedSubRegionId) return null;
+    if (selectedSubRegionId.startsWith('helice-group')) {
+      const groupSubs = subRegions.filter((s) => s.groupId === selectedSubRegionId);
+      if (groupSubs.length === 0) return null;
+      const first = groupSubs[0];
+      return {
+        id: selectedSubRegionId,
+        name: first.name ? `${first.name.replace(/\s*\d+$/, '').trim()} (${groupSubs.length}x)` : 'HÉLICE MÚLTIPLA',
+        isGroup: true,
+        branches: groupSubs.length,
+        openings: [],
+        topPolarity: first.topPolarity,
+        groupSubs,
+      };
+    }
+    return subRegions.find((s) => s.id === selectedSubRegionId) || null;
+  }, [subRegions, selectedSubRegionId]);
 
   // ── Keyboard shortcuts ──────────────────────────────────────────────────────
   React.useEffect(() => {
@@ -156,7 +175,7 @@ export default function App() {
         createSubRegion({
           id: `sub-helice-${Date.now()}-${i}-${heliceNum}`,
           name: `${prefix} ${String(heliceNum).padStart(2, '0')}`,
-          x: startX + i * 250,
+          x: startX,
           y: fixedY,
           branches: 1,
           topPolarity: topPolarity,
@@ -192,10 +211,24 @@ export default function App() {
       connections: [...prev.connections, ...newConnections],
     }));
     setSelectedNode(null);
-    setNotice(`${num} sub-regiões hélice criadas na sequência 1, N, 2, N-1... com ligações automáticas (-) → (+).`);
+    setNotice(`${num} sub-regiões hélice criadas. Apenas os 2 nós externos estão expostos na tela principal.`);
   }
 
   function updateSubRegion(nextSub) {
+    if (nextSub.isGroup) {
+      // Atualiza nome de todas as subs do grupo
+      setState((prev) => ({
+        ...prev,
+        subRegions: prev.subRegions.map((sub) => {
+          if (sub.groupId === nextSub.id) {
+            return { ...sub, name: `${nextSub.name} ${sub.heliceIndex || ''}`.trim() };
+          }
+          return sub;
+        }),
+      }));
+      return;
+    }
+
     const validNodeIds = new Set(buildSubRegionNodes(nextSub).map((node) => node.id));
     const cleanedSub = {
       ...nextSub,
@@ -214,9 +247,12 @@ export default function App() {
   function updatePosition(id, x, y) {
     setStateNoHistory((prev) => ({
       ...prev,
-      subRegions: prev.subRegions.map((sub) =>
-        sub.id === id ? { ...sub, x: Math.max(30, x), y: Math.max(80, y) } : sub
-      ),
+      subRegions: prev.subRegions.map((sub) => {
+        if (sub.id === id || sub.groupId === id) {
+          return { ...sub, x: Math.max(30, x), y: Math.max(80, y) };
+        }
+        return sub;
+      }),
     }));
   }
 
@@ -226,10 +262,17 @@ export default function App() {
   }
 
   function deleteSubRegion(id) {
+    const isGroup = id && id.startsWith('helice-group');
+    const targetSubIds = new Set(
+      subRegions
+        .filter((s) => (isGroup ? s.groupId === id : s.id === id))
+        .map((s) => s.id)
+    );
+
     setState((prev) => ({
-      subRegions: prev.subRegions.filter((sub) => sub.id !== id),
+      subRegions: prev.subRegions.filter((sub) => !targetSubIds.has(sub.id)),
       connections: prev.connections.filter(
-        (conn) => conn.fromSubRegionId !== id && conn.toSubRegionId !== id
+        (conn) => !targetSubIds.has(conn.fromSubRegionId) && !targetSubIds.has(conn.toSubRegionId)
       ),
     }));
     if (selectedSubRegionId === id) setSelectedSubRegionId(null);
@@ -324,6 +367,10 @@ export default function App() {
   }
 
   const detailSubRegion = subRegions.find((s) => s.id === detailSubRegionId) || null;
+  const detailMultiHeliceSubs = useMemo(() => {
+    if (!detailMultiHeliceGroupId) return [];
+    return subRegions.filter((s) => s.groupId === detailMultiHeliceGroupId);
+  }, [subRegions, detailMultiHeliceGroupId]);
 
   function exportCsv() {
     const errors = validateConnectivity(subRegions, connections);
@@ -367,6 +414,7 @@ export default function App() {
           onCommitPosition={commitPosition}
           onSelectSubRegion={setSelectedSubRegionId}
           onOpenDetail={setDetailSubRegionId}
+          onOpenMultiHeliceDetail={setDetailMultiHeliceGroupId}
         />
 
         <PropertiesPanel
@@ -374,6 +422,7 @@ export default function App() {
           onChange={updateSubRegion}
           onClose={() => setSelectedSubRegionId(null)}
           onDelete={() => deleteSubRegion(selectedSubRegionId)}
+          onOpenGroupDetail={setDetailMultiHeliceGroupId}
         />
       </div>
 
@@ -408,6 +457,17 @@ export default function App() {
           onToggleOpening={toggleSubOpening}
           onToggleNodeVisibility={toggleNodeVisibility}
           onClose={() => setDetailSubRegionId(null)}
+        />
+      )}
+
+      {detailMultiHeliceGroupId && detailMultiHeliceSubs.length > 0 && (
+        <MultiHeliceDetail
+          groupId={detailMultiHeliceGroupId}
+          subs={detailMultiHeliceSubs}
+          globalNumbers={globalNumbers}
+          globalBranches={globalBranches}
+          connections={connections}
+          onClose={() => setDetailMultiHeliceGroupId(null)}
         />
       )}
     </div>

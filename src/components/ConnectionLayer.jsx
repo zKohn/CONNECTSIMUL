@@ -1,8 +1,21 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { getSubRegionPortPoint } from './SubRegion';
+import { getMultiHelicePortPoint } from './MultiHeliceGroup';
 
 export default function ConnectionLayer({ subRegions, connections, width, height }) {
-  const subMap = new Map(subRegions.map((sub) => [sub.id, sub]));
+  const subMap = useMemo(() => new Map(subRegions.map((sub) => [sub.id, sub])), [subRegions]);
+  
+  const groupSubsMap = useMemo(() => {
+    const map = new Map();
+    for (const sub of subRegions) {
+      if (sub.groupId) {
+        if (!map.has(sub.groupId)) map.set(sub.groupId, []);
+        map.get(sub.groupId).push(sub);
+      }
+    }
+    return map;
+  }, [subRegions]);
+
   return (
     <svg 
       className="connection-layer" 
@@ -19,8 +32,21 @@ export default function ConnectionLayer({ subRegions, connections, width, height
         const fromSub = subMap.get(connection.fromSubRegionId);
         const toSub = subMap.get(connection.toSubRegionId);
         if (!fromSub || !toSub) return null;
-        const a = getSubRegionPortPoint(fromSub, connection.fromNumber, connections);
-        const b = getSubRegionPortPoint(toSub, connection.toNumber, connections);
+
+        // Se ambos pertencerem ao mesmo groupId, é uma conexão interna da hélice múltipla:
+        // NÃO desenha na tela principal para não poluir a visualização (é exibida na aba de detalhes!)
+        if (fromSub.groupId && toSub.groupId && fromSub.groupId === toSub.groupId) {
+          return null;
+        }
+
+        const a = fromSub.groupId
+          ? getMultiHelicePortPoint(groupSubsMap.get(fromSub.groupId), connection.fromNumber, connections)
+          : getSubRegionPortPoint(fromSub, connection.fromNumber, connections);
+
+        const b = toSub.groupId
+          ? getMultiHelicePortPoint(groupSubsMap.get(toSub.groupId), connection.toNumber, connections)
+          : getSubRegionPortPoint(toSub, connection.toNumber, connections);
+
         if (!a || !b) return null;
 
         const isSameSub = fromSub.id === toSub.id;
