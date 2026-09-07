@@ -36,34 +36,55 @@ export default function SubRegionDetail({
     return essential;
   }, [subRegion, connections]);
 
-  const nodeSpan = Math.max(0, nodes.length - 1) * NODE_SPACING;
-  const bodyHeight = TOP_PADDING + nodeSpan + BOTTOM_PADDING;
-  const bottom = bodyHeight - BOTTOM_PADDING;
-  const positions = nodes.map((_, index) => bottom - index * NODE_SPACING);
+  const DETAIL_OPENING_GAP = 28;
 
-  const endpointAt = (position, side) => {
-    const atPosition = nodes.filter((node) => node.position === position);
-    if (atPosition.length === 0) return null;
-    if (atPosition.length === 1) return atPosition[0];
-    return side === 'lower'
-      ? atPosition.find((node) => node.role === 'lower-opening')
-      : atPosition.find((node) => node.role === 'upper-opening');
-  };
+  const nodeOffsets = useMemo(() => {
+    const offsets = [];
+    let current = 0;
+    for (let i = 0; i < nodes.length; i++) {
+      if (i > 0) {
+        const prev = nodes[i - 1];
+        const curr = nodes[i];
+        const isOpeningBreak =
+          prev.role === 'lower-opening' &&
+          curr.role === 'upper-opening' &&
+          prev.position === curr.position;
+        current += NODE_SPACING + (isOpeningBreak ? DETAIL_OPENING_GAP : 0);
+      }
+      offsets.push(current);
+    }
+    return offsets;
+  }, [nodes]);
+
+  const totalSpan = nodeOffsets.length > 0 ? nodeOffsets[nodeOffsets.length - 1] : 0;
+  const bodyHeight = TOP_PADDING + totalSpan + BOTTOM_PADDING;
+  const bottom = bodyHeight - BOTTOM_PADDING;
+  const positions = nodeOffsets.map((off) => bottom - off);
 
   const startBranch = globalBranches?.get(subRegion.id) || 1;
 
-  const branchRows = Array.from({ length: subRegion.branches }, (_, i) => {
-    const branch = i + 1;
-    const globalBranch = startBranch + i;
-    const lowerNode = endpointAt(branch - 1, 'lower');
-    const upperNode = endpointAt(branch, 'upper');
-    if (!lowerNode || !upperNode) return null;
-    const lowerIndex = nodes.findIndex((node) => node.id === lowerNode.id);
-    const upperIndex = nodes.findIndex((node) => node.id === upperNode.id);
-    const y1 = bottom - lowerIndex * NODE_SPACING;
-    const y2 = bottom - upperIndex * NODE_SPACING;
-    return { branch, globalBranch, y: (y1 + y2) / 2 };
-  }).filter(Boolean);
+  const branchRows = useMemo(() => {
+    return Array.from({ length: subRegion.branches }, (_, i) => {
+      const branch = i + 1;
+      const globalBranch = startBranch + i;
+      const lowerCandidates = nodes.filter((n) => n.position === branch - 1);
+      const upperCandidates = nodes.filter((n) => n.position === branch);
+      if (lowerCandidates.length === 0 || upperCandidates.length === 0) return null;
+
+      // O nó inferior da rama é o último candidato da posição anterior (upper-opening se houver abertura)
+      const lowerNode = lowerCandidates[lowerCandidates.length - 1];
+      // O nó superior da rama é o primeiro candidato da posição atual (lower-opening se houver abertura)
+      const upperNode = upperCandidates[0];
+
+      const lowerIndex = nodes.findIndex((node) => node.id === lowerNode.id);
+      const upperIndex = nodes.findIndex((node) => node.id === upperNode.id);
+      if (lowerIndex < 0 || upperIndex < 0) return null;
+
+      const y1 = positions[lowerIndex];
+      const y2 = positions[upperIndex];
+      return { branch, globalBranch, y: (y1 + y2) / 2 };
+    }).filter(Boolean);
+  }, [subRegion.branches, startBranch, nodes, positions]);
 
   const openingPositions = Array.from(
     { length: Math.max(0, subRegion.branches - 1) },
@@ -156,14 +177,17 @@ export default function SubRegionDetail({
                 (node) => node.position === position
               );
 
-              const index = nodes.findIndex(
-                (node) => node.id === nodesAtPosition[0]?.id
-              );
+              if (nodesAtPosition.length === 0) return null;
 
-              const y =
-                index >= 0
-                  ? bottom - index * NODE_SPACING
-                  : null;
+              let y;
+              if (isOpen && nodesAtPosition.length >= 2) {
+                const lowerIdx = nodes.findIndex((n) => n.id === nodesAtPosition[0].id);
+                const upperIdx = nodes.findIndex((n) => n.id === nodesAtPosition[1].id);
+                y = (positions[lowerIdx] + positions[upperIdx]) / 2;
+              } else {
+                const idx = nodes.findIndex((n) => n.id === nodesAtPosition[0]?.id);
+                y = idx >= 0 ? positions[idx] : null;
+              }
 
               if (y == null) return null;
 
@@ -176,15 +200,14 @@ export default function SubRegionDetail({
                   key={position}
                   className={`detail-opening-marker ${isOpen ? 'opening-active' : ''
                     }`}
-                  style={{ top: y - 13 }}
+                  style={{ top: y - 11 }}
                   onClick={(event) => {
                     event.stopPropagation();
                     onToggleOpening(subRegion.id, position);
                   }}
                   title={
                     isOpen
-                      ? `Fechar abertura entre ramas ${globalBranch} e ${globalBranch + 1
-                      }`
+                      ? `Fechar abertura entre ramas ${globalBranch} e ${globalBranch + 1}`
                       : `Abrir conexão entre ramas ${globalBranch} e ${globalBranch + 1
                       }`
                   }

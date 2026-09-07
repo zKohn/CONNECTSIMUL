@@ -31,6 +31,16 @@ export default function MultiHeliceDetail({
     );
   }, [connections, groupSubIds]);
 
+  const allGroupNodesMap = useMemo(() => {
+    const map = new Map();
+    for (const sub of subs) {
+      for (const node of buildSubRegionNodes(sub)) {
+        map.set(node.id, node);
+      }
+    }
+    return map;
+  }, [subs]);
+
   const totalWidth = CANVAS_PADDING * 2 + subs.length * SUB_WIDTH + (subs.length - 1) * SUB_GAP;
   const canvasHeight = 240;
 
@@ -259,6 +269,10 @@ export default function MultiHeliceDetail({
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '8px' }}>
             {internalConnections.map((conn, i) => {
+              const fromNode = allGroupNodesMap.get(conn.from);
+              const toNode = allGroupNodesMap.get(conn.to);
+              const fromPol = fromNode?.polarity || '';
+              const toPol = toNode?.polarity || '';
               const fromNum = globalNumbers.get(conn.from);
               const toNum = globalNumbers.get(conn.to);
               return (
@@ -278,9 +292,9 @@ export default function MultiHeliceDetail({
                 >
                   <span style={{ color: '#687887' }}>Passo {i + 1}:</span>
                   <span>
-                    <strong style={{ color: '#edf2f7' }}>Ponto {fromNum}</strong>
+                    <strong style={{ color: '#edf2f7' }}>Ponto {fromPol}{fromNum}</strong>
                     <span style={{ color: 'var(--cyan)', margin: '0 6px' }}>➜</span>
-                    <strong style={{ color: '#edf2f7' }}>Ponto {toNum}</strong>
+                    <strong style={{ color: '#edf2f7' }}>Ponto {toPol}{toNum}</strong>
                   </span>
                 </div>
               );

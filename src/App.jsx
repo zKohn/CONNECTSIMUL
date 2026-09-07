@@ -11,12 +11,12 @@ import {
 import { buildGlobalNumberMap, buildGlobalBranchMap } from './model/nodeNumbering';
 import {
   buildTableRows,
-  exportRowsToCsv,
   validateConnectivity,
 } from './model/connectivity';
 import SubRegionDetail from './components/SubRegionDetail';
 import MultiHeliceModal from './components/MultiHeliceModal';
 import MultiHeliceDetail from './components/MultiHeliceDetail';
+import BatchSubRegionModal from './components/BatchSubRegionModal';
 import { useHistory } from './hooks/useHistory';
 
 function makeInitialState() {
@@ -61,6 +61,7 @@ export default function App() {
   const [selectedNode, setSelectedNode] = useState(null);
   const [showTable, setShowTable] = useState(false);
   const [showMultiHeliceModal, setShowMultiHeliceModal] = useState(false);
+  const [showBatchModal, setShowBatchModal] = useState(false);
   const [notice, setNotice] = useState(null);
   const [detailSubRegionId, setDetailSubRegionId] = useState(null);
   const [detailMultiHeliceGroupId, setDetailMultiHeliceGroupId] = useState(null);
@@ -191,8 +192,12 @@ export default function App() {
       const nextSub = newSubs[i + 1];
       const currentNodes = buildSubRegionNodes(currentSub);
       const nextNodes = buildSubRegionNodes(nextSub);
-      const fromNode = currentNodes.find((n) => n.polarity === '-' || n.position === 0);
-      const toNode = nextNodes.find((n) => n.polarity === '+' || n.position === 1);
+      const fromNode =
+        currentNodes.find((n) => n.polarity === '-') ||
+        (currentSub.topPolarity === '-' ? currentNodes[currentNodes.length - 1] : currentNodes[0]);
+      const toNode =
+        nextNodes.find((n) => n.polarity === '+') ||
+        (nextSub.topPolarity === '-' ? nextNodes[0] : nextNodes[nextNodes.length - 1]);
       if (fromNode && toNode) {
         newConnections.push({
           id: `connection-${Date.now()}-${i}`,
@@ -212,6 +217,106 @@ export default function App() {
     }));
     setSelectedNode(null);
     setNotice(`${num} sub-regiões hélice criadas. Apenas os 2 nós externos estão expostos na tela principal.`);
+  }
+
+  function addBatchSubRegions(batchRows) {
+    if (!batchRows || batchRows.length === 0) return;
+
+    let currentX = subRegions.length > 0
+      ? Math.max(...subRegions.map((s) => s.x)) + 260
+      : 80;
+    const fixedY = 100;
+
+    const allNewSubs = [];
+    const allNewConnections = [];
+    let standardSubCounter = subRegions.filter((s) => !s.groupId).length + 1;
+
+    batchRows.forEach((item, itemIdx) => {
+      const topPolarity = item.topPolarity === '-' ? '-' : '+';
+      const count = Math.max(1, Math.min(64, Number(item.count) || 4));
+
+      if (item.type === 'helice') {
+        const prefix = (item.name || '').trim() || 'HÉLICE';
+        const heliceOrder = [];
+        let left = 1;
+        let right = count;
+        while (left <= right) {
+          heliceOrder.push(left);
+          if (left !== right) heliceOrder.push(right);
+          left++;
+          right--;
+        }
+
+        const groupId = `helice-group-${Date.now()}-${itemIdx}`;
+        const groupSubs = [];
+
+        for (let i = 0; i < heliceOrder.length; i++) {
+          const heliceNum = heliceOrder[i];
+          groupSubs.push(
+            createSubRegion({
+              id: `sub-helice-${Date.now()}-${itemIdx}-${i}-${heliceNum}`,
+              name: `${prefix} ${String(heliceNum).padStart(2, '0')}`,
+              x: currentX,
+              y: fixedY,
+              branches: 1,
+              topPolarity,
+              groupId,
+              heliceIndex: heliceNum,
+            })
+          );
+        }
+
+        for (let i = 0; i < groupSubs.length - 1; i++) {
+          const curSub = groupSubs[i];
+          const nxtSub = groupSubs[i + 1];
+          const curNodes = buildSubRegionNodes(curSub);
+          const nxtNodes = buildSubRegionNodes(nxtSub);
+          const fromNode =
+            curNodes.find((n) => n.polarity === '-') ||
+            (curSub.topPolarity === '-' ? curNodes[curNodes.length - 1] : curNodes[0]);
+          const toNode =
+            nxtNodes.find((n) => n.polarity === '+') ||
+            (nxtSub.topPolarity === '-' ? nxtNodes[0] : nxtNodes[nxtNodes.length - 1]);
+          if (fromNode && toNode) {
+            allNewConnections.push({
+              id: `connection-${Date.now()}-${itemIdx}-${i}`,
+              from: fromNode.id,
+              to: toNode.id,
+              fromSubRegionId: curSub.id,
+              toSubRegionId: nxtSub.id,
+              fromNumber: fromNode.number,
+              toNumber: toNode.number,
+            });
+          }
+        }
+
+        allNewSubs.push(...groupSubs);
+        currentX += 260;
+      } else {
+        // Sub-região normal
+        const defaultName = `SUB ${String(standardSubCounter++).padStart(2, '0')}`;
+        const name = (item.name || '').trim() || defaultName;
+
+        const sub = createSubRegion({
+          id: `sub-${Date.now()}-${itemIdx}`,
+          name,
+          x: currentX,
+          y: fixedY,
+          branches: count,
+          topPolarity,
+        });
+
+        allNewSubs.push(sub);
+        currentX += 260;
+      }
+    });
+
+    setState((prev) => ({
+      subRegions: [...prev.subRegions, ...allNewSubs],
+      connections: [...prev.connections, ...allNewConnections],
+    }));
+    setSelectedNode(null);
+    setNotice(`${batchRows.length} sub-regiões geradas com sucesso a partir da tabela.`);
   }
 
   function updateSubRegion(nextSub) {
@@ -372,18 +477,62 @@ export default function App() {
     return subRegions.filter((s) => s.groupId === detailMultiHeliceGroupId);
   }, [subRegions, detailMultiHeliceGroupId]);
 
-  function exportCsv() {
-    const errors = validateConnectivity(subRegions, connections);
-    if (errors.length) { setNotice(errors[0]); return; }
-    const csv = exportRowsToCsv(rows);
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  function saveProjectJson() {
+    const projectData = {
+      app: 'CONNECTSIMUL',
+      version: '1.0',
+      exportedAt: new Date().toISOString(),
+      subRegions,
+      connections,
+    };
+
+    const jsonString = JSON.stringify(projectData, null, 2);
+    const blob = new Blob([jsonString], { type: 'application/json;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement('a');
     anchor.href = url;
-    anchor.download = 'conexoes_eletricas.csv';
+    anchor.download = `connectsimul_projeto_${Date.now()}.json`;
     anchor.click();
     URL.revokeObjectURL(url);
-    setNotice('CSV exportado com sucesso.');
+    setNotice('Arquivo JSON do projeto salvo no computador com sucesso.');
+  }
+
+  function importProjectJson(file) {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const content = e.target.result;
+        const data = JSON.parse(content);
+
+        // Suporta tanto formato completo { subRegions, connections } quanto array direto
+        let newSubs = [];
+        let newConns = [];
+
+        if (Array.isArray(data.subRegions)) {
+          newSubs = data.subRegions;
+          newConns = Array.isArray(data.connections) ? data.connections : [];
+        } else if (Array.isArray(data)) {
+          // Caso alguém salve diretamente a lista de sub-regiões
+          newSubs = data;
+        } else {
+          throw new Error('Formato JSON inválido: subRegions não encontrado.');
+        }
+
+        setState({
+          subRegions: newSubs,
+          connections: newConns,
+        });
+
+        setSelectedNode(null);
+        setSelectedSubRegionId(null);
+        setNotice(`Projeto importado com sucesso: ${newSubs.length} sub-regiões e ${newConns.length} conexões.`);
+      } catch (err) {
+        console.error(err);
+        setNotice(`Erro ao importar arquivo JSON: ${err.message || 'Arquivo corrompido ou formato incompatível.'}`);
+      }
+    };
+    reader.readAsText(file);
   }
 
   return (
@@ -391,9 +540,11 @@ export default function App() {
       <Toolbar
         onAddSubRegion={addSubRegion}
         onOpenMultiHeliceModal={() => setShowMultiHeliceModal(true)}
+        onOpenBatchModal={() => setShowBatchModal(true)}
         onDeleteConnection={deleteConnectionsForSelectedNode}
         onClearSelection={() => { setSelectedNode(null); setNotice(null); }}
-        onExport={exportCsv}
+        onSaveJson={saveProjectJson}
+        onImportJson={importProjectJson}
         connectionMode={Boolean(selectedNode)}
         selectedNode={selectedNode}
         onOpenTable={() => setShowTable(true)}
@@ -445,6 +596,13 @@ export default function App() {
         <MultiHeliceModal
           onClose={() => setShowMultiHeliceModal(false)}
           onCreate={addMultiHeliceSubRegion}
+        />
+      )}
+
+      {showBatchModal && (
+        <BatchSubRegionModal
+          onClose={() => setShowBatchModal(false)}
+          onCreateBatch={addBatchSubRegions}
         />
       )}
 

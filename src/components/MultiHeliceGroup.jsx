@@ -37,8 +37,16 @@ export function getMultiHeliceExternalNodes(subs, connections = []) {
     }
   }
 
-  // Ordena para que o nó (-) fique embaixo e (+) em cima
-  externalNodes.sort((a, b) => (a.polarity === '-' ? -1 : 1));
+  // Ordena para que o nó inferior fique embaixo e o superior em cima
+  const topPolarity = subs[0]?.topPolarity || '+';
+  externalNodes.sort((a, b) => {
+    if (topPolarity === '-') {
+      // Quando (-) é superior, o nó inferior é (+) e o superior é (-)
+      return a.polarity === '+' ? -1 : 1;
+    }
+    // Quando (+) é superior, o nó inferior é (-) e o superior é (+)
+    return a.polarity === '-' ? -1 : 1;
+  });
   return externalNodes;
 }
 

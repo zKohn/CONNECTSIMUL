@@ -7,6 +7,8 @@ Simulador visual de conexões elétricas em React + Vite.
 - Cada sub-região é um retângulo vertical com pontos conectáveis à esquerda e à direita.
 - **Conexão entre nós da mesma sub-região:** Agora é possível conectar nós de uma mesma sub-região entre si (o algoritmo desenha um loop limpo na lateral correspondente).
 - **Sub-região Hélice Múltipla:** Criação em lote de sequências de sub-regiões em série (cada uma com 1 rama e 2 nós). Na **tela principal**, o conjunto é apresentado de forma enxuta como um **bloco único compacto**, expondo apenas os **2 nós externos desprovidos de conexão interna** (o polo `+` da Hélice 1 e o polo `−` da última hélice). Clicando no botão `⊕`, abre-se o modal de **Detalhes da Hélice Múltipla**, exibindo a disposição completa horizontal de todas as sub-regiões na ordem alternada `1, N, 2, N-1, 3, N-2...` e as curvas de conexão interna `(−) → (+)`.
+- **Geração Rápida de Subs em Lote (Tabela):** Permite configurar e gerar em sequência múltiplas sub-regiões através de uma interface de tabela, customizando tipo (Sub Padrão ou Hélice Múltipla), quantidade de ramas/hélices, polaridade superior (`+` ou `−`) e nome opcional de cada sub.
+- **Salvar e Abrir Projetos (JSON):** Exporta e importa o estado completo do projeto (todas as sub-regiões, aberturas, posições e conexões elétricas) diretamente em arquivos `.json`, permitindo salvar o progresso no computador e carregar projetos anteriores a qualquer momento.
 - **Numeração Estática por Ordem de Nascimento:** Nas sub-regiões pertencentes a uma Hélice Múltipla, os números dos nós e das ramas seguem estritamente a ordem de criação/nascimento (`Hélice 1` recebe os primeiros nós, `Hélice 2` os seguintes, e assim sucessivamente), independentemente da posição física $x$ alternada na tela ou de movimentações horizontais posteriores.
 - **Disposição e Rolagem Horizontal:** Todas as sub-regiões são geradas e organizadas na horizontal na mesma altura (`y = 100`), expandindo o canvas dinamicamente sem necessidade de rolagem vertical. É possível navegar horizontalmente com a roda do mouse ou arrastar as subs.
 - O número de ramas é configurável. As ramas são identificadas localmente como R1, R2, R3... de baixo para cima.
@@ -17,8 +19,8 @@ Simulador visual de conexões elétricas em React + Vite.
 - Uma abertura separa o nó compartilhado em dois pontos independentes, mantendo o mesmo número de ramas.
 - A numeração exibida dos pontos é **global e única** entre todas as sub-regiões.
 - A ordem global é: sub-regiões da esquerda para a direita; dentro de cada sub-região, nós de baixo para cima.
+- **Tabela de Conexões e Cópia:** A tabela de conexões lista as ligações por potencial elétrico de forma tabular, permitindo copiar diretamente todos os dados com um clique para a área de transferência no formato ideal para colar no Excel/planilhas.
 - Deleção de sub-regiões adicionada (via botão no painel de propriedades ou tecla `Delete` com o bloco focado).
-- A tabela de conexões e a exportação CSV listam as conexões na **ordem em que foram criadas/definidas** (preservando o sentido de origem `N1` para destino `N2`). No caso da Hélice Múltipla, a tabela reflete diretamente a sequência em série pré-definida das ligações.
 
 ## Exemplo de abertura
 

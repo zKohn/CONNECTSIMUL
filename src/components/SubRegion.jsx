@@ -8,11 +8,34 @@ const FOOTER_HEIGHT = 28;
 const TOP_PADDING = 24;
 const BOTTOM_PADDING = 24;
 const NODE_SPACING = 28;
+const OPENING_GAP = 24;
 const MIN_BODY_HEIGHT = 80;
 
+export function calculateVisibleNodeOffsets(visibleNodes) {
+  const offsets = [];
+  let currentOffset = 0;
+
+  for (let i = 0; i < visibleNodes.length; i++) {
+    if (i > 0) {
+      const prev = visibleNodes[i - 1];
+      const curr = visibleNodes[i];
+      const isOpeningBreak =
+        prev.role === 'lower-opening' &&
+        curr.role === 'upper-opening' &&
+        prev.position === curr.position;
+
+      currentOffset += NODE_SPACING + (isOpeningBreak ? OPENING_GAP : 0);
+    }
+    offsets.push(currentOffset);
+  }
+
+  return offsets;
+}
+
 export function getSubRegionHeight(subRegion, connections = []) {
-  const count = getVisibleNodes(subRegion, connections).length;
-  const nodeSpan = Math.max(0, count - 1) * NODE_SPACING;
+  const visibleNodes = getVisibleNodes(subRegion, connections);
+  const offsets = calculateVisibleNodeOffsets(visibleNodes);
+  const nodeSpan = offsets.length > 0 ? offsets[offsets.length - 1] : 0;
   const bodyHeight = Math.max(MIN_BODY_HEIGHT, TOP_PADDING + nodeSpan + BOTTOM_PADDING);
   return HEADER_HEIGHT + bodyHeight + FOOTER_HEIGHT;
 }
@@ -26,11 +49,11 @@ export function getSubRegionNodeY(subRegion, nodeNumber, connections = []) {
   const visibleIndex = visibleNodes.findIndex((node) => node.id === targetNode.id);
   if (visibleIndex < 0) return null;
 
-  const count = visibleNodes.length;
-  const nodeSpan = Math.max(0, count - 1) * NODE_SPACING;
+  const offsets = calculateVisibleNodeOffsets(visibleNodes);
+  const nodeSpan = offsets.length > 0 ? offsets[offsets.length - 1] : 0;
   const bodyHeight = Math.max(MIN_BODY_HEIGHT, TOP_PADDING + nodeSpan + BOTTOM_PADDING);
   const bottom = bodyHeight - BOTTOM_PADDING;
-  return HEADER_HEIGHT + (bottom - visibleIndex * NODE_SPACING);
+  return HEADER_HEIGHT + (bottom - offsets[visibleIndex]);
 }
 
 export function getSubRegionPortPoint(subRegion, nodeNumber, connections = []) {
@@ -61,13 +84,12 @@ export default function SubRegion({
     [subRegion, connections]
   );
   const height = getSubRegionHeight(subRegion, connections);
-  const nodeCount = visibleNodes.length;
-
-  const nodeSpan = Math.max(0, nodeCount - 1) * NODE_SPACING;
+  const offsets = useMemo(() => calculateVisibleNodeOffsets(visibleNodes), [visibleNodes]);
+  const nodeSpan = offsets.length > 0 ? offsets[offsets.length - 1] : 0;
   const bodyHeight = Math.max(MIN_BODY_HEIGHT, TOP_PADDING + nodeSpan + BOTTOM_PADDING);
 
   const bottom = bodyHeight - BOTTOM_PADDING;
-  const positions = visibleNodes.map((_, index) => bottom - index * NODE_SPACING);
+  const positions = offsets.map((off) => bottom - off);
 
   const connectedNodeIds = useMemo(() => {
     const set = new Set();
