@@ -7,7 +7,7 @@ export default function MultiHeliceModal({ onClose, onCreate }) {
 
   function handleSubmit(e) {
     e.preventDefault();
-    const num = Math.max(1, Math.min(64, Number(count) || 8));
+    const num = Math.max(1, Math.min(1000, Number(count) || 8));
     onCreate(num, prefix.trim() || 'HÉLICE', topPolarity);
     onClose();
   }
@@ -34,17 +34,30 @@ export default function MultiHeliceModal({ onClose, onCreate }) {
               <input
                 type="number"
                 min="1"
-                max="64"
+                max="1000"
                 value={count}
-                onChange={(e) => setCount(Math.max(1, Math.min(64, parseInt(e.target.value, 10) || 1)))}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val === '') {
+                    setCount('');
+                  } else {
+                    const parsed = parseInt(val, 10);
+                    if (!isNaN(parsed)) {
+                      setCount(Math.max(1, Math.min(1000, parsed)));
+                    }
+                  }
+                }}
+                onBlur={() => {
+                  if (!count || count < 1) setCount(1);
+                }}
                 style={{ width: '80px', textAlign: 'center' }}
                 required
               />
               <input
                 type="range"
                 min="1"
-                max="32"
-                value={Math.min(32, count)}
+                max="100"
+                value={Math.min(100, Number(count) || 1)}
                 onChange={(e) => setCount(parseInt(e.target.value, 10))}
                 style={{ flex: 1, accentColor: 'var(--cyan)' }}
               />

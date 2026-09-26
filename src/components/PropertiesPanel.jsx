@@ -39,7 +39,7 @@ export default function PropertiesPanel({
             className="no-spinner-input"
             value={subRegion.voltageValue ?? ''}
             onChange={(e) => onUpdateVoltageValue ? onUpdateVoltageValue(e.target.value) : onChange({ ...subRegion, voltageValue: e.target.value })}
-            placeholder="Ex: 650"
+            placeholder="Ex: 110"
           />
         </label>
 
@@ -208,8 +208,24 @@ export default function PropertiesPanel({
         <input
           type="number"
           min="1"
-          value={subRegion.branches}
-          onChange={(e) => onChange(resizeBranches(subRegion, e.target.value))}
+          max="1000"
+          value={subRegion.branches ?? ''}
+          onChange={(e) => {
+            const val = e.target.value;
+            if (val === '') {
+              onChange(resizeBranches(subRegion, ''));
+            } else {
+              const parsed = parseInt(val, 10);
+              if (!isNaN(parsed)) {
+                onChange(resizeBranches(subRegion, Math.max(1, Math.min(1000, parsed))));
+              }
+            }
+          }}
+          onBlur={() => {
+            if (!subRegion.branches || subRegion.branches < 1) {
+              onChange(resizeBranches(subRegion, 1));
+            }
+          }}
         />
       </label>
 
@@ -237,7 +253,7 @@ export default function PropertiesPanel({
           <span>cortes / aberturas</span>
         </div>
         <div>
-          <strong>{MAX_OPENINGS}</strong>
+          <strong>{Math.max(0, subRegion.branches - 1)}</strong>
           <span>máximo</span>
         </div>
       </div>

@@ -1,10 +1,12 @@
-export const MAX_OPENINGS = 20;
+export const MAX_OPENINGS = 1000;
 export const MIN_BRANCHES = 1;
+export const MAX_BRANCHES = 1000;
 
 export function clampBranches(value) {
+  if (value === '' || value == null) return MIN_BRANCHES;
   const n = Number.parseInt(value, 10);
   if (!Number.isFinite(n)) return MIN_BRANCHES;
-  return Math.max(MIN_BRANCHES, n);
+  return Math.max(MIN_BRANCHES, Math.min(MAX_BRANCHES, n));
 }
 
 /*
@@ -183,6 +185,12 @@ export function toggleOpening(subRegion, position) {
 }
 
 export function resizeBranches(subRegion, branches) {
+  if (branches === '') {
+    return {
+      ...subRegion,
+      branches: '',
+    };
+  }
   const nextBranches = clampBranches(branches);
   return {
     ...subRegion,

@@ -11,7 +11,9 @@ export default function SubRegionDetail({
   globalBranches,
   connections,
   onToggleOpening,
+  onToggleAllOpenings,
   onToggleNodeVisibility,
+  onShowAllNodes,
   onClose,
 }) {
   const nodes = useMemo(() => buildSubRegionNodes(subRegion), [subRegion]);
@@ -21,6 +23,10 @@ export default function SubRegionDetail({
     return new Set(vNodes.map((n) => n.id));
   }, [subRegion, connections]);
 
+  const allNodesVisible = visibleNodeIds.size === nodes.length;
+  const allOpeningsOpen =
+    subRegion.branches > 1 && (subRegion.openings || []).length >= subRegion.branches - 1;
+
   const essentialNodeIds = useMemo(() => {
     const essential = new Set();
     const allNodes = buildSubRegionNodes(subRegion);
@@ -29,12 +35,8 @@ export default function SubRegionDetail({
     allNodes.forEach((n) => {
       if (n.role === 'lower-opening' || n.role === 'upper-opening') essential.add(n.id);
     });
-    for (const conn of connections) {
-      if (conn.fromSubRegionId === subRegion.id) essential.add(conn.from);
-      if (conn.toSubRegionId === subRegion.id) essential.add(conn.to);
-    }
     return essential;
-  }, [subRegion, connections]);
+  }, [subRegion]);
 
   const DETAIL_OPENING_GAP = 28;
 
@@ -101,6 +103,80 @@ export default function SubRegionDetail({
           </div>
 
           <div className="detail-header-info">
+            {onToggleAllOpenings && subRegion.branches > 1 && (
+              <button
+                type="button"
+                className={`icon-btn ${allOpeningsOpen ? 'icon-btn--active' : ''}`}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: allOpeningsOpen ? 'var(--amber)' : '#94a3b8',
+                  borderColor: allOpeningsOpen ? 'rgba(251, 191, 36, 0.4)' : undefined,
+                  background: allOpeningsOpen ? 'rgba(251, 191, 36, 0.12)' : undefined,
+                }}
+                onClick={() => onToggleAllOpenings(subRegion.id, !allOpeningsOpen)}
+                title={
+                  allOpeningsOpen
+                    ? 'Fechar todas as aberturas entre nós (restaurar conexões)'
+                    : 'Abrir todas as conexões entre nós (separar todas as ramas)'
+                }
+                aria-label={
+                  allOpeningsOpen
+                    ? 'Fechar todas as aberturas'
+                    : 'Abrir todas as conexões'
+                }
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <circle cx="6" cy="6" r="3" />
+                  <circle cx="6" cy="18" r="3" />
+                  <line x1="20" y1="4" x2="8.12" y2="15.88" />
+                  <line x1="14.47" y1="14.48" x2="20" y2="20" />
+                  <line x1="8.12" y1="8.12" x2="12" y2="12" />
+                </svg>
+              </button>
+            )}
+
+            {onShowAllNodes && (
+              <button
+                type="button"
+                className={`icon-btn ${allNodesVisible ? 'icon-btn--active' : ''}`}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: allNodesVisible ? 'var(--cyan)' : '#94a3b8',
+                  borderColor: allNodesVisible ? 'rgba(69, 214, 255, 0.4)' : undefined,
+                  background: allNodesVisible ? 'rgba(69, 214, 255, 0.12)' : undefined,
+                }}
+                onClick={() => onShowAllNodes(subRegion.id, !allNodesVisible)}
+                title={
+                  allNodesVisible
+                    ? 'Ocultar pontos não essenciais na tela principal'
+                    : 'Exibir todos os pontos na tela principal'
+                }
+                aria-label={
+                  allNodesVisible
+                    ? 'Ocultar pontos intermediários'
+                    : 'Exibir todos os pontos'
+                }
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  {allNodesVisible ? (
+                    <>
+                      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+                      <line x1="1" y1="1" x2="23" y2="23" />
+                    </>
+                  ) : (
+                    <>
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                      <circle cx="12" cy="12" r="3" />
+                    </>
+                  )}
+                </svg>
+              </button>
+            )}
+
             <span className="branch-chip">{subRegion.branches} RAMAS</span>
             <button className="icon-btn" onClick={onClose} aria-label="Fechar">
               ×
@@ -139,10 +215,10 @@ export default function SubRegionDetail({
                     className="detail-visibility-toggle"
                     title={
                       isEssential
-                        ? 'Ponto essencial (sempre visível)'
-                        : isCenter
-                          ? 'Nó central • Alternar visibilidade na tela principal'
-                          : 'Alternar visibilidade na tela principal'
+                        ? 'Ponto estrutural (extremidade ou abertura)'
+                        : isVisible
+                          ? 'Clique para ocultar este ponto (conexões associadas serão desfeitas)'
+                          : 'Clique para exibir este ponto na tela principal'
                     }
                   >
                     <input

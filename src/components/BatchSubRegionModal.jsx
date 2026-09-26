@@ -47,7 +47,11 @@ export default function BatchSubRegionModal({ onClose, onCreateBatch }) {
   function handleSubmit(e) {
     e.preventDefault();
     if (rows.length === 0) return;
-    onCreateBatch(rows);
+    const sanitizedRows = rows.map((r) => ({
+      ...r,
+      count: Math.max(1, Math.min(1000, Number(r.count) || 1)),
+    }));
+    onCreateBatch(sanitizedRows);
     onClose();
   }
 
@@ -115,11 +119,24 @@ export default function BatchSubRegionModal({ onClose, onCreateBatch }) {
                       <input
                         type="number"
                         min="1"
-                        max="64"
+                        max="1000"
                         value={row.count}
-                        onChange={(e) =>
-                          updateRow(row.id, 'count', Math.max(1, Math.min(64, parseInt(e.target.value, 10) || 1)))
-                        }
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (val === '') {
+                            updateRow(row.id, 'count', '');
+                          } else {
+                            const parsed = parseInt(val, 10);
+                            if (!isNaN(parsed)) {
+                              updateRow(row.id, 'count', Math.max(1, Math.min(1000, parsed)));
+                            }
+                          }
+                        }}
+                        onBlur={() => {
+                          if (!row.count || row.count < 1) {
+                            updateRow(row.id, 'count', 1);
+                          }
+                        }}
                         style={{
                           width: '100%',
                           background: '#171d25',

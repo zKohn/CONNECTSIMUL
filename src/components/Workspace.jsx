@@ -28,6 +28,7 @@ export default function Workspace({
   onUpdateEarthPosition,
   onCommitEarthPosition,
   onDeleteEarth,
+  onShowAllNodes,
 }) {
   const workspaceRef = React.useRef(null);
   const globalNumbers = useMemo(() => buildGlobalNumberMap(subRegions), [subRegions]);
@@ -185,19 +186,25 @@ export default function Workspace({
       ref={workspaceRef}
       onWheel={handleWheel}
       onPointerDown={handlePointerDownWorkspace}
+      onDragStart={(e) => e.preventDefault()}
     >
       <div className="workspace-grid" style={{ width: canvasWidth, minWidth: canvasWidth, height: canvasHeight }} />
 
       <div className="workspace-hint">
         <span className="hint-key">ARRASTE A TELA</span> para navegar
         <span className="hint-separator">•</span>
-        <span className="hint-key">⊕</span> abrir detalhes
+        <span className="hint-key" style={{ display: 'inline-flex', verticalAlign: '-1px' }}>
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <circle cx="11" cy="11" r="8" />
+            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+          </svg>
+        </span> abrir detalhes
         <span className="hint-separator">•</span>
         <span className="hint-key">CONECTE</span> terminais
         <span className="hint-separator">•</span>
         <span className="hint-key">R</span> girar pino
         <span className="hint-separator">•</span>
-        <span className="hint-key">DEL</span> apagar
+        <span className="hint-key">DEL / D</span> apagar
       </div>
 
       <ConnectionLayer
@@ -223,6 +230,7 @@ export default function Workspace({
           onCommitPosition={onCommitPosition}
           onSelectSubRegion={onSelectSubRegion}
           onOpenDetail={onOpenDetail}
+          onShowAllNodes={onShowAllNodes}
         />
       ))}
 

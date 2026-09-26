@@ -47,7 +47,7 @@ function makeInitialState() {
     connections: [],
     voltageConfig: {
       appliedNodeId: null,
-      voltageValue: '13.8',
+      voltageValue: '110',
       groundedNodeIds: [],
       source: {
         id: 'voltage-source',
@@ -263,7 +263,7 @@ export default function App() {
         }
       }
       // Delete connection
-      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedConnectionId) {
+      if ((e.key === 'Delete' || e.key === 'Backspace' || e.key === 'd' || e.key === 'D') && selectedConnectionId) {
         if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
           e.preventDefault();
           deleteSingleConnection(selectedConnectionId);
@@ -271,8 +271,9 @@ export default function App() {
         }
       }
       // Delete selected sub-region, voltage source, or earth pin
-      if (e.key === 'Delete' && selectedSubRegionId) {
+      if ((e.key === 'Delete' || e.key === 'd' || e.key === 'D') && selectedSubRegionId) {
         if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
+          e.preventDefault();
           handleDeleteSelected(selectedSubRegionId);
           return;
         }
@@ -316,7 +317,7 @@ export default function App() {
   }
 
   function addMultiHeliceSubRegion(count, prefix = 'HÉLICE', topPolarity = '+') {
-    const num = Math.max(1, Math.min(64, Number(count) || 8));
+    const num = Math.max(1, Math.min(1000, Number(count) || 8));
     const startX = subRegions.length > 0
       ? Math.max(...subRegions.map((s) => s.x)) + 260
       : 80;
@@ -357,12 +358,10 @@ export default function App() {
       const nextSub = newSubs[i + 1];
       const currentNodes = buildSubRegionNodes(currentSub);
       const nextNodes = buildSubRegionNodes(nextSub);
-      const fromNode =
-        currentNodes.find((n) => n.polarity === '-') ||
-        (currentSub.topPolarity === '-' ? currentNodes[currentNodes.length - 1] : currentNodes[0]);
-      const toNode =
-        nextNodes.find((n) => n.polarity === '+') ||
-        (nextSub.topPolarity === '-' ? nextNodes[0] : nextNodes[nextNodes.length - 1]);
+      // A ligação dos nós internos é sempre do nó inferior (debaixo) para o nó superior (de cima),
+      // independentemente de o sinal superior ser '+' ou '-'
+      const fromNode = currentNodes[0];
+      const toNode = nextNodes[nextNodes.length - 1];
       if (fromNode && toNode) {
         newConnections.push({
           id: `connection-${Date.now()}-${i}`,
@@ -399,7 +398,7 @@ export default function App() {
 
     batchRows.forEach((item, itemIdx) => {
       const topPolarity = item.topPolarity === '-' ? '-' : '+';
-      const count = Math.max(1, Math.min(64, Number(item.count) || 4));
+      const count = Math.max(1, Math.min(1000, Number(item.count) || 4));
 
       if (item.type === 'helice') {
         const prefix = (item.name || '').trim() || 'HÉLICE';
@@ -437,12 +436,10 @@ export default function App() {
           const nxtSub = groupSubs[i + 1];
           const curNodes = buildSubRegionNodes(curSub);
           const nxtNodes = buildSubRegionNodes(nxtSub);
-          const fromNode =
-            curNodes.find((n) => n.polarity === '-') ||
-            (curSub.topPolarity === '-' ? curNodes[curNodes.length - 1] : curNodes[0]);
-          const toNode =
-            nxtNodes.find((n) => n.polarity === '+') ||
-            (nxtSub.topPolarity === '-' ? nxtNodes[0] : nxtNodes[nxtNodes.length - 1]);
+          // A ligação dos nós internos é sempre do nó inferior (debaixo) para o nó superior (de cima),
+          // independentemente de o sinal superior ser '+' ou '-'
+          const fromNode = curNodes[0];
+          const toNode = nxtNodes[nxtNodes.length - 1];
           if (fromNode && toNode) {
             allNewConnections.push({
               id: `connection-${Date.now()}-${itemIdx}-${i}`,
@@ -501,18 +498,56 @@ export default function App() {
       return;
     }
 
-    const validNodeIds = new Set(buildSubRegionNodes(nextSub).map((node) => node.id));
+    const newNodes = buildSubRegionNodes(nextSub);
+    const validNodeIds = new Set(newNodes.map((node) => node.id));
+    const newNodesMap = new Map(newNodes.map((n) => [n.id, n]));
+
     const cleanedSub = {
       ...nextSub,
       visibleNodes: (nextSub.visibleNodes || []).filter((id) => validNodeIds.has(id)),
     };
 
-    setState((prev) => ({
-      subRegions: prev.subRegions.map((sub) => sub.id === cleanedSub.id ? cleanedSub : sub),
-      connections: prev.connections
-        .filter((c) => validNodeIds.has(c.from) || c.fromSubRegionId !== cleanedSub.id)
-        .filter((c) => validNodeIds.has(c.to) || c.toSubRegionId !== cleanedSub.id),
-    }));
+    setState((prev) => {
+      const remainingConnections = [];
+      for (const c of prev.connections) {
+        const fromIsSub = c.fromSubRegionId === cleanedSub.id;
+        const toIsSub = c.toSubRegionId === cleanedSub.id;
+
+        if (fromIsSub && !validNodeIds.has(c.from)) continue;
+        if (toIsSub && !validNodeIds.has(c.to)) continue;
+
+        let updatedFromNumber = c.fromNumber;
+        let updatedToNumber = c.toNumber;
+
+        if (fromIsSub) {
+          const matchingNode = newNodesMap.get(c.from);
+          if (matchingNode) updatedFromNumber = matchingNode.number;
+        }
+        if (toIsSub) {
+          const matchingNode = newNodesMap.get(c.to);
+          if (matchingNode) updatedToNumber = matchingNode.number;
+        }
+
+        remainingConnections.push({
+          ...c,
+          fromNumber: updatedFromNumber,
+          toNumber: updatedToNumber,
+        });
+      }
+
+      const { appliedNodeId, groundedNodeIds } = deriveVoltageNodesFromConnections(remainingConnections);
+
+      return {
+        ...prev,
+        subRegions: prev.subRegions.map((sub) => (sub.id === cleanedSub.id ? cleanedSub : sub)),
+        connections: remainingConnections,
+        voltageConfig: {
+          ...prev.voltageConfig,
+          appliedNodeId,
+          groundedNodeIds,
+        },
+      };
+    });
   }
 
   /** Chamado enquanto arrasta — sem registrar no histórico */
@@ -845,31 +880,266 @@ export default function App() {
   }
 
   function toggleSubOpening(subId, position) {
-    setState((prev) => ({
-      ...prev,
-      subRegions: prev.subRegions.map((sub) =>
-        sub.id === subId ? toggleOpening(sub, position) : sub
-      ),
-    }));
+    setState((prev) => {
+      const targetSub = prev.subRegions.find((s) => s.id === subId);
+      if (!targetSub) return prev;
+
+      // 1. Nós existentes na posição afetada antes da repartição
+      const oldNodes = buildSubRegionNodes(targetSub);
+      const affectedOldNodes = oldNodes.filter((n) => n.position === position);
+      const affectedOldNodeIds = new Set(affectedOldNodes.map((n) => n.id));
+
+      // 2. Nova sub-região e seus nós válidos
+      const newSub = toggleOpening(targetSub, position);
+      const newNodes = buildSubRegionNodes(newSub);
+      const newNodesMap = new Map(newNodes.map((n) => [n.id, n]));
+      const validNewIds = new Set(newNodes.map((n) => n.id));
+
+      // 3. Desfazer conexões dos nós afetados na posição ou inválidos
+      const remainingConnections = [];
+      for (const c of prev.connections) {
+        const fromIsSub = c.fromSubRegionId === subId;
+        const toIsSub = c.toSubRegionId === subId;
+
+        if (fromIsSub && (affectedOldNodeIds.has(c.from) || !validNewIds.has(c.from))) {
+          continue;
+        }
+        if (toIsSub && (affectedOldNodeIds.has(c.to) || !validNewIds.has(c.to))) {
+          continue;
+        }
+
+        let updatedFromNumber = c.fromNumber;
+        let updatedToNumber = c.toNumber;
+
+        if (fromIsSub) {
+          const matchingNode = newNodesMap.get(c.from);
+          if (matchingNode) updatedFromNumber = matchingNode.number;
+        }
+        if (toIsSub) {
+          const matchingNode = newNodesMap.get(c.to);
+          if (matchingNode) updatedToNumber = matchingNode.number;
+        }
+
+        remainingConnections.push({
+          ...c,
+          fromNumber: updatedFromNumber,
+          toNumber: updatedToNumber,
+        });
+      }
+
+      const cleanedNewSub = {
+        ...newSub,
+        visibleNodes: (newSub.visibleNodes || []).filter(
+          (id) => validNewIds.has(id) && !affectedOldNodeIds.has(id)
+        ),
+      };
+
+      const { appliedNodeId, groundedNodeIds } = deriveVoltageNodesFromConnections(remainingConnections);
+
+      return {
+        ...prev,
+        subRegions: prev.subRegions.map((sub) => (sub.id === subId ? cleanedNewSub : sub)),
+        connections: remainingConnections,
+        voltageConfig: {
+          ...prev.voltageConfig,
+          appliedNodeId,
+          groundedNodeIds,
+        },
+      };
+    });
+
     setSelectedNode(null);
-    setNotice(`Abertura entre ramas ${position} e ${position + 1} atualizada.`);
+    setSelectedConnectionId(null);
+    setNotice(`Repartição na posição ${position} atualizada. Conexões dos pontos afetados foram desfeitas.`);
+  }
+
+  function toggleAllSubOpenings(subId, openAll) {
+    setState((prev) => {
+      const targetSub = prev.subRegions.find((s) => s.id === subId);
+      if (!targetSub || targetSub.branches <= 1) return prev;
+
+      const allPositions = Array.from(
+        { length: targetSub.branches - 1 },
+        (_, i) => i + 1
+      );
+
+      const targetOpenings = openAll ? allPositions : [];
+
+      const oldOpeningsSet = new Set(targetSub.openings || []);
+      const newOpeningsSet = new Set(targetOpenings);
+      const changedPositions = new Set();
+      for (const p of allPositions) {
+        if (oldOpeningsSet.has(p) !== newOpeningsSet.has(p)) {
+          changedPositions.add(p);
+        }
+      }
+
+      if (changedPositions.size === 0) return prev;
+
+      // 1. Nós existentes nas posições alteradas antes da repartição
+      const oldNodes = buildSubRegionNodes(targetSub);
+      const affectedOldNodes = oldNodes.filter((n) => changedPositions.has(n.position));
+      const affectedOldNodeIds = new Set(affectedOldNodes.map((n) => n.id));
+
+      // 2. Nova sub-região e seus nós válidos
+      const newSub = {
+        ...targetSub,
+        openings: targetOpenings,
+      };
+      const newNodes = buildSubRegionNodes(newSub);
+      const newNodesMap = new Map(newNodes.map((n) => [n.id, n]));
+      const validNewIds = new Set(newNodes.map((n) => n.id));
+
+      // 3. Desfazer conexões dos nós afetados nas posições alteradas ou que se tornaram inválidos
+      const remainingConnections = [];
+      for (const c of prev.connections) {
+        const fromIsSub = c.fromSubRegionId === subId;
+        const toIsSub = c.toSubRegionId === subId;
+
+        if (fromIsSub && (affectedOldNodeIds.has(c.from) || !validNewIds.has(c.from))) {
+          continue;
+        }
+        if (toIsSub && (affectedOldNodeIds.has(c.to) || !validNewIds.has(c.to))) {
+          continue;
+        }
+
+        let updatedFromNumber = c.fromNumber;
+        let updatedToNumber = c.toNumber;
+
+        if (fromIsSub) {
+          const matchingNode = newNodesMap.get(c.from);
+          if (matchingNode) updatedFromNumber = matchingNode.number;
+        }
+        if (toIsSub) {
+          const matchingNode = newNodesMap.get(c.to);
+          if (matchingNode) updatedToNumber = matchingNode.number;
+        }
+
+        remainingConnections.push({
+          ...c,
+          fromNumber: updatedFromNumber,
+          toNumber: updatedToNumber,
+        });
+      }
+
+      const cleanedNewSub = {
+        ...newSub,
+        visibleNodes: (newSub.visibleNodes || []).filter(
+          (id) => validNewIds.has(id) && !affectedOldNodeIds.has(id)
+        ),
+      };
+
+      const { appliedNodeId, groundedNodeIds } = deriveVoltageNodesFromConnections(remainingConnections);
+
+      return {
+        ...prev,
+        subRegions: prev.subRegions.map((sub) => (sub.id === subId ? cleanedNewSub : sub)),
+        connections: remainingConnections,
+        voltageConfig: {
+          ...prev.voltageConfig,
+          appliedNodeId,
+          groundedNodeIds,
+        },
+      };
+    });
+
+    setSelectedNode(null);
+    setSelectedConnectionId(null);
+    setNotice(openAll ? 'Todas as conexões entre nós foram abertas.' : 'Todas as aberturas foram fechadas.');
   }
 
   function toggleNodeVisibility(subId, nodeId) {
-    setState((prev) => ({
-      ...prev,
-      subRegions: prev.subRegions.map((sub) => {
-        if (sub.id !== subId) return sub;
-        const visibleNodes = sub.visibleNodes || [];
-        const has = visibleNodes.includes(nodeId);
-        return {
-          ...sub,
-          visibleNodes: has
-            ? visibleNodes.filter((id) => id !== nodeId)
-            : [...visibleNodes, nodeId],
-        };
-      }),
-    }));
+    setState((prev) => {
+      const targetSub = prev.subRegions.find((s) => s.id === subId);
+      if (!targetSub) return prev;
+
+      const visibleNodes = targetSub.visibleNodes || [];
+      const isCurrentlyVisible = visibleNodes.includes(nodeId);
+
+      // Se estamos tirando a seleção do ponto (ocultando-o), desfaz as conexões associadas a ele
+      let remainingConnections = prev.connections;
+      if (isCurrentlyVisible) {
+        remainingConnections = prev.connections.filter(
+          (c) => !(c.from === nodeId && c.fromSubRegionId === subId) &&
+                 !(c.to === nodeId && c.toSubRegionId === subId)
+        );
+      }
+
+      const nextVisibleNodes = isCurrentlyVisible
+        ? visibleNodes.filter((id) => id !== nodeId)
+        : [...visibleNodes, nodeId];
+
+      const updatedSub = {
+        ...targetSub,
+        visibleNodes: nextVisibleNodes,
+      };
+
+      const { appliedNodeId, groundedNodeIds } = deriveVoltageNodesFromConnections(remainingConnections);
+
+      return {
+        ...prev,
+        subRegions: prev.subRegions.map((sub) => (sub.id === subId ? updatedSub : sub)),
+        connections: remainingConnections,
+        voltageConfig: {
+          ...prev.voltageConfig,
+          appliedNodeId,
+          groundedNodeIds,
+        },
+      };
+    });
+    setSelectedNode(null);
+    setSelectedConnectionId(null);
+  }
+
+  function showAllSubNodes(subId, show = true) {
+    setState((prev) => {
+      const targetSub = prev.subRegions.find((s) => s.id === subId);
+      if (!targetSub) return prev;
+
+      const allNodes = buildSubRegionNodes(targetSub);
+      const allIds = allNodes.map((n) => n.id);
+
+      let remainingConnections = prev.connections;
+      let nextVisibleNodes = allIds;
+
+      if (!show) {
+        // Se estiver ocultando intermediários, apenas nós essenciais permanecem visíveis
+        const structuralIds = new Set([
+          allNodes[0]?.id,
+          allNodes[allNodes.length - 1]?.id,
+          ...allNodes.filter((n) => n.role === 'lower-opening' || n.role === 'upper-opening').map((n) => n.id),
+        ]);
+
+        // Desfaz conexões dos nós intermediários que estão sendo ocultados
+        remainingConnections = prev.connections.filter(
+          (c) => (c.fromSubRegionId !== subId || structuralIds.has(c.from)) &&
+                 (c.toSubRegionId !== subId || structuralIds.has(c.to))
+        );
+        nextVisibleNodes = [];
+      }
+
+      const updatedSub = {
+        ...targetSub,
+        visibleNodes: nextVisibleNodes,
+      };
+
+      const { appliedNodeId, groundedNodeIds } = deriveVoltageNodesFromConnections(remainingConnections);
+
+      return {
+        ...prev,
+        subRegions: prev.subRegions.map((s) => (s.id === subId ? updatedSub : s)),
+        connections: remainingConnections,
+        voltageConfig: {
+          ...prev.voltageConfig,
+          appliedNodeId,
+          groundedNodeIds,
+        },
+      };
+    });
+
+    setSelectedNode(null);
+    setSelectedConnectionId(null);
+    setNotice(show ? 'Todos os pontos foram selecionados para aparecerem na tela principal.' : 'Pontos intermediários ocultados.');
   }
 
   const detailSubRegion = subRegions.find((s) => s.id === detailSubRegionId) || null;
@@ -914,7 +1184,7 @@ export default function App() {
         let newConns = [];
         let newVoltageConfig = {
           appliedNodeId: null,
-          voltageValue: '13.8',
+          voltageValue: '110',
           groundedNodeIds: [],
           source: { id: 'voltage-source', x: 80, y: 360, enabled: true },
           earths: [{ id: 'earth-1', x: 80, y: 490 }],
@@ -1027,6 +1297,7 @@ export default function App() {
           onUpdateEarthPosition={updateEarthPosition}
           onCommitEarthPosition={commitEarthPosition}
           onDeleteEarth={deleteEarth}
+          onShowAllNodes={showAllSubNodes}
         />
         <VoltageSourceModal
           isOpen={showVoltageModal}
@@ -1097,7 +1368,9 @@ export default function App() {
           globalBranches={globalBranches}
           connections={connections}
           onToggleOpening={toggleSubOpening}
+          onToggleAllOpenings={toggleAllSubOpenings}
           onToggleNodeVisibility={toggleNodeVisibility}
+          onShowAllNodes={showAllSubNodes}
           onClose={() => setDetailSubRegionId(null)}
         />
       )}

@@ -17,42 +17,40 @@ export function getMultiHeliceGroupHeight() {
 
 export function getMultiHeliceExternalNodes(subs, connections = []) {
   if (!subs || subs.length === 0) return [];
-  const groupSubIds = new Set(subs.map((s) => s.id));
-  const internalConnNodeIds = new Set();
-
-  for (const conn of connections) {
-    if (groupSubIds.has(conn.fromSubRegionId) && groupSubIds.has(conn.toSubRegionId)) {
-      internalConnNodeIds.add(conn.from);
-      internalConnNodeIds.add(conn.to);
-    }
+  if (subs.length === 1) {
+    const nodes = buildSubRegionNodes(subs[0]);
+    return [...nodes].sort((a, b) => a.position - b.position);
   }
 
-  const externalNodes = [];
-  for (const sub of subs) {
-    const nodes = buildSubRegionNodes(sub);
-    for (const node of nodes) {
-      if (!internalConnNodeIds.has(node.id)) {
-        externalNodes.push(node);
-      }
-    }
-  }
+  const firstSub = subs[0];
+  const lastSub = subs[subs.length - 1];
 
-  // Ordena para que o nó inferior fique embaixo e o superior em cima
-  const topPolarity = subs[0]?.topPolarity || '+';
-  externalNodes.sort((a, b) => {
-    if (topPolarity === '-') {
-      // Quando (-) é superior, o nó inferior é (+) e o superior é (-)
-      return a.polarity === '+' ? -1 : 1;
-    }
-    // Quando (+) é superior, o nó inferior é (-) e o superior é (+)
-    return a.polarity === '-' ? -1 : 1;
-  });
+  const firstNodes = buildSubRegionNodes(firstSub);
+  const lastNodes = buildSubRegionNodes(lastSub);
+
+  // Na cadeia de hélices:
+  // A ligação interna é SEMPRE do nó inferior (debaixo) para o nó superior (de cima).
+  // Logo:
+  // - Na 1ª hélice, o nó debaixo é conectado internamente; o terminal externo livre é o de CIMA (superior, position 1).
+  // - Na última hélice, o nó de cima é conectado internamente; o terminal externo livre é o de BAIXO (inferior, position 0).
+  const firstExternal = firstNodes[firstNodes.length - 1];
+  const lastExternal = lastNodes[0];
+
+  const externalNodes = [lastExternal, firstExternal];
+  externalNodes.sort((a, b) => a.position - b.position);
   return externalNodes;
 }
 
-export function getMultiHelicePortPoint(groupSubs, nodeNumber, connections = []) {
+export function getMultiHelicePortPoint(groupSubs, nodeNumber, connections = [], nodeId = null) {
+  if (!groupSubs || groupSubs.length === 0) return null;
   const externalNodes = getMultiHeliceExternalNodes(groupSubs, connections);
-  const targetIndex = externalNodes.findIndex((n) => n.number === nodeNumber);
+  let targetIndex = -1;
+  if (nodeId) {
+    targetIndex = externalNodes.findIndex((n) => n.id === nodeId);
+  }
+  if (targetIndex < 0 && nodeNumber != null) {
+    targetIndex = externalNodes.findIndex((n) => n.number === nodeNumber);
+  }
   if (targetIndex < 0) return null;
 
   const firstSub = groupSubs[0];
@@ -92,18 +90,17 @@ export default function MultiHeliceGroup({
 
   const connectedNodeIds = useMemo(() => {
     const set = new Set();
-    const subIds = new Set(subs.map((s) => s.id));
+    const extNodeIds = new Set(externalNodes.map((n) => n.id));
     for (const conn of connections || []) {
-      // Conexões externas com outras subs
-      if (subIds.has(conn.fromSubRegionId) && !subIds.has(conn.toSubRegionId)) {
+      if (extNodeIds.has(conn.from)) {
         set.add(conn.from);
       }
-      if (subIds.has(conn.toSubRegionId) && !subIds.has(conn.fromSubRegionId)) {
+      if (extNodeIds.has(conn.to)) {
         set.add(conn.to);
       }
     }
     return set;
-  }, [connections, subs]);
+  }, [connections, externalNodes]);
 
   const groupName = useMemo(() => {
     if (!firstSub) return 'HÉLICE MÚLTIPLA';
@@ -116,6 +113,7 @@ export default function MultiHeliceGroup({
       className="subregion multi-helice-group-block"
       style={{ left: firstSub.x, top: firstSub.y, width: WIDTH, height }}
       onMouseDown={() => onSelectGroup(groupId)}
+      onDragStart={(e) => e.preventDefault()}
       onPointerDown={(event) => {
         if (event.target.closest('button')) return;
         const startX = event.clientX;
@@ -148,7 +146,10 @@ export default function MultiHeliceGroup({
               onOpenDetail(groupId);
             }}
           >
-            ⊕
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <circle cx="11" cy="11" r="8" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
           </button>
           <span className="branch-chip" style={{ borderColor: 'rgba(89, 227, 145, 0.35)', color: 'var(--green)' }}>
             {subs.length} HÉLICES

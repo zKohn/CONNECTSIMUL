@@ -1,5 +1,6 @@
 import React, { useMemo, useRef } from 'react';
 import { buildSubRegionNodes } from '../model/electricalModel';
+import { getMultiHeliceExternalNodes } from './MultiHeliceGroup';
 
 const SUB_WIDTH = 140;
 const SUB_GAP = 30;
@@ -23,13 +24,18 @@ export default function MultiHeliceDetail({
     return `${prefix} (${subs.length} HÉLICES)`;
   }, [subs]);
 
-  // Identifica conexões internas do grupo
+  // Identifica conexões internas do grupo (exclui eventual loop externo entre os dois terminais)
   const groupSubIds = useMemo(() => new Set(subs.map((s) => s.id)), [subs]);
   const internalConnections = useMemo(() => {
+    const extNodes = getMultiHeliceExternalNodes(subs, connections);
+    const extNodeIds = new Set(extNodes.map((n) => n.id));
     return connections.filter(
-      (c) => groupSubIds.has(c.fromSubRegionId) && groupSubIds.has(c.toSubRegionId)
+      (c) =>
+        groupSubIds.has(c.fromSubRegionId) &&
+        groupSubIds.has(c.toSubRegionId) &&
+        !(extNodeIds.has(c.from) && extNodeIds.has(c.to))
     );
-  }, [connections, groupSubIds]);
+  }, [connections, groupSubIds, subs]);
 
   const allGroupNodesMap = useMemo(() => {
     const map = new Map();
@@ -100,7 +106,7 @@ export default function MultiHeliceDetail({
         <div style={{ padding: '16px 24px 8px 24px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
           <p style={{ margin: 0, color: '#94a3b8', fontSize: '12px', lineHeight: '1.5' }}>
             Visualização completa da cadeia de hélices. A disposição segue a ordem alternada dos extremos para o centro 
-            (<strong>1, N, 2, N-1, 3, N-2...</strong>) com conexões automáticas entre o polo <strong>(−)</strong> e o polo <strong>(+)</strong> subsequente.
+            (<strong>1, N, 2, N-1, 3, N-2...</strong>) com conexões automáticas do nó <strong>inferior</strong> para o nó <strong>superior</strong> subsequente.
           </p>
         </div>
 

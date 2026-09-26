@@ -111,6 +111,7 @@ export default function EarthBlock({
         transformOrigin: '24px 24px',
       }}
       onPointerDown={handlePointerDown}
+      onDragStart={(e) => e.preventDefault()}
       title={`Ponto de Terra (0 kV) • Pressione [R] para girar • ${isConnected ? `Conectado a ${connectedNodeLabel}` : 'Clique para ver propriedades'}`}
     >
       <svg viewBox="0 0 48 48" className="pin-symbol-svg" aria-hidden="true">

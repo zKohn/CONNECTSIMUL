@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { getSubRegionPortPoint } from './SubRegion';
-import { getMultiHelicePortPoint } from './MultiHeliceGroup';
+import { getMultiHelicePortPoint, getMultiHeliceExternalNodes } from './MultiHeliceGroup';
 import { getVoltageSourcePortPoint } from './VoltageSourceBlock';
 import { getEarthPortPoint } from './EarthBlock';
 
@@ -28,7 +28,7 @@ export default function ConnectionLayer({
     return map;
   }, [subRegions]);
 
-  const getPort = (subRegionId, nodeNumber) => {
+  const getPort = (subRegionId, nodeNumber, nodeId = null) => {
     if (subRegionId === 'voltage-source') {
       return getVoltageSourcePortPoint(voltageSource);
     }
@@ -38,7 +38,7 @@ export default function ConnectionLayer({
     const sub = subMap.get(subRegionId);
     if (!sub) return null;
     return sub.groupId
-      ? getMultiHelicePortPoint(groupSubsMap.get(sub.groupId), nodeNumber, connections)
+      ? getMultiHelicePortPoint(groupSubsMap.get(sub.groupId), nodeNumber, connections, nodeId)
       : getSubRegionPortPoint(sub, nodeNumber, connections);
   };
 
@@ -66,13 +66,28 @@ export default function ConnectionLayer({
       const fromSub = subMap.get(connection.fromSubRegionId);
       const toSub = subMap.get(connection.toSubRegionId);
 
-      // Conexão interna de hélice múltipla:
-      if (fromSub && toSub && fromSub.groupId && toSub.groupId && fromSub.groupId === toSub.groupId) {
-        continue;
+      const isSameGroup = Boolean(
+        fromSub &&
+        toSub &&
+        fromSub.groupId &&
+        toSub.groupId &&
+        fromSub.groupId === toSub.groupId
+      );
+
+      if (isSameGroup) {
+        const groupSubs = groupSubsMap.get(fromSub.groupId);
+        const extNodes = groupSubs ? getMultiHeliceExternalNodes(groupSubs, connections) : [];
+        const extNodeIds = new Set(extNodes.map((n) => n.id));
+        const isExternalMultiHeliceLoop = extNodeIds.has(connection.from) && extNodeIds.has(connection.to);
+
+        if (!isExternalMultiHeliceLoop) {
+          // Conexão interna da cadeia em série da hélice múltipla: não desenha no workspace
+          continue;
+        }
       }
 
-      const a = getPort(connection.fromSubRegionId, connection.fromNumber);
-      const b = getPort(connection.toSubRegionId, connection.toNumber);
+      const a = getPort(connection.fromSubRegionId, connection.fromNumber, connection.from);
+      const b = getPort(connection.toSubRegionId, connection.toNumber, connection.to);
 
       if (!a || !b) continue;
 
@@ -82,7 +97,7 @@ export default function ConnectionLayer({
       const glowClass = type === 'earth' ? 'connection-path-glow--earth' : type === 'voltage' ? 'connection-path-glow--voltage' : 'connection-path-glow';
       const endpointClass = type === 'earth' ? 'connection-endpoint--earth' : type === 'voltage' ? 'connection-endpoint--voltage' : 'connection-endpoint';
 
-      const isSameSub = connection.fromSubRegionId === connection.toSubRegionId;
+      const isSameSub = connection.fromSubRegionId === connection.toSubRegionId || isSameGroup;
 
       const portsA = a.ports || [
         { x: a.leftX, y: a.y, dirX: -1, dirY: 0, dir: -1 },

@@ -112,6 +112,7 @@ export default function VoltageSourceBlock({
         position: 'absolute',
       }}
       onPointerDown={handlePointerDown}
+      onDragStart={(e) => e.preventDefault()}
       title={`Fonte de Tensão (${voltageValue || '0'} kV) • Pressione [R] para girar • ${isConnected ? `Conectado a ${connectedNodeLabel}` : 'Clique para ver propriedades'}`}
     >
       <div

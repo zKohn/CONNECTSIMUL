@@ -8,19 +8,18 @@ export default function VoltageTable({ config, globalNumbers, nodes = [], onClos
     if (!nodeId) return '—';
     if (globalNumbers && globalNumbers.has(nodeId)) {
       const gNum = globalNumbers.get(nodeId);
-      const foundNode = nodes.find((n) => n.id === nodeId);
-      const pol = foundNode?.polarity || '';
-      return `${pol}${gNum}`;
+      return String(gNum).replace(/^[+\-]/, '');
     }
     const foundNode = nodes.find((n) => n.id === nodeId);
     if (foundNode) {
-      return `${foundNode.polarity || ''}${foundNode.number ?? foundNode.id}`;
+      const num = foundNode.number ?? foundNode.id;
+      return String(num).replace(/^[+\-]/, '');
     }
-    return String(nodeId);
+    return String(nodeId).replace(/^[+\-]/, '');
   };
 
   const appliedNode = formatNode(appliedNodeId);
-  const voltage = voltageValue !== '' && voltageValue != null ? `${voltageValue} kV` : '—';
+  const voltage = voltageValue !== '' && voltageValue != null ? String(voltageValue).replace(/\s*kV/i, '').trim() : '—';
   const groundedDisplayList = groundedNodeIds.map(formatNode);
 
   function handleCopy() {

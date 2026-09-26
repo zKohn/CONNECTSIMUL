@@ -23,6 +23,7 @@
 
 * {
   box-sizing: border-box;
+  -webkit-user-drag: none;
 }
 
 html,
@@ -47,6 +48,32 @@ input {
   font: inherit;
 }
 
+button,
+button *,
+.btn,
+.btn *,
+.icon-btn,
+.icon-btn *,
+.topbar,
+.topbar *,
+.workspace,
+.workspace *,
+.workspace-hint,
+.workspace-hint *,
+.node-legend,
+.node-legend *,
+.brand-mark,
+.sidebar-toggle-btn,
+.detail-btn,
+.panel-icon,
+.toast-icon,
+svg {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
 button {
   color: inherit;
   outline: none;
@@ -65,8 +92,8 @@ button:focus-visible {
 }
 
 .topbar {
-  height: 56px;
-  flex: 0 0 56px;
+  height: 66px;
+  flex: 0 0 66px;
   display: flex;
   align-items: center;
   gap: 24px;
@@ -75,6 +102,8 @@ button:focus-visible {
   border-bottom: 1px solid var(--border);
   backdrop-filter: blur(18px);
   z-index: 20;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 .brand {
@@ -285,6 +314,8 @@ button:focus-visible {
   color: #707c89;
   font-size: 10px;
   backdrop-filter: blur(10px);
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 .hint-key {
@@ -475,7 +506,11 @@ button:focus-visible {
 .subregion {
   position: absolute;
   z-index: 4;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
   user-select: none;
+  -webkit-user-drag: none;
   border: 1px solid #2a3540;
   border-radius: 16px;
   background: linear-gradient(145deg, #161c24, #0b0f14);
@@ -1478,7 +1513,11 @@ td {
 .triangular-pin {
   width: 48px;
   height: 48px;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
   user-select: none;
+  -webkit-user-drag: none;
   z-index: 10;
   cursor: grab;
   display: flex;
@@ -1707,15 +1746,17 @@ td {
   background: rgba(69, 214, 255, 0.08);
 }
 
-/* Remover setas verticais (spinners) em inputs numéricos */
+/* Remover setas verticais (spinners) em TODOS os inputs numéricos do sistema */
+input[type=number]::-webkit-outer-spin-button,
+input[type=number]::-webkit-inner-spin-button,
 .no-spinner-input::-webkit-outer-spin-button,
 .no-spinner-input::-webkit-inner-spin-button {
   -webkit-appearance: none;
-  appearance: none;
   margin: 0;
 }
 
-.no-spinner-input[type=number] {
+input[type=number],
+.no-spinner-input {
   -moz-appearance: textfield;
   appearance: textfield;
 }
