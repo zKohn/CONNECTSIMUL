@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { buildSubRegionNodes, getVisibleNodes, isCenterNode } from '../model/electricalModel';
 import NodeTerminal from './NodeTerminal';
 
-const WIDTH = 220;
+const WIDTH = 180;
 const HEADER_HEIGHT = 56;
 const FOOTER_HEIGHT = 28;
 const TOP_PADDING = 24;
@@ -61,8 +61,8 @@ export function getSubRegionPortPoint(subRegion, nodeNumber, connections = []) {
   if (y == null) return null;
   const scrollAdjustedY = subRegion.y + y;
   return {
-    leftX: subRegion.x + 12,
-    rightX: subRegion.x + 200,
+    leftX: subRegion.x + 27,
+    rightX: subRegion.x + WIDTH - 27,
     y: scrollAdjustedY
   };
 }

@@ -4,18 +4,25 @@ export default function Toolbar({
   onAddSubRegion,
   onOpenMultiHeliceModal,
   onOpenBatchModal,
+  onAddVoltageSource,
+  onAddEarth,
   onDeleteConnection,
+  onDeleteSingleConnection,
   onClearSelection,
   onExport,
   onSaveJson,
   onImportJson,
   connectionMode,
   selectedNode,
-  onOpenTable,
+  selectedConnectionId,
+  onOpenConnectionTable,
+  onOpenVoltageTable,
   onUndo,
   onRedo,
   canUndo,
   canRedo,
+  onToggleSidebar,
+  isSidebarOpen,
 }) {
   const fileInputRef = React.useRef(null);
 
@@ -38,13 +45,13 @@ export default function Toolbar({
 
       <div className="toolbar-actions">
         {/* Grupo: Criar */}
-        <div className="toolbar-group" title="Criação de sub-regiões">
+        <div className="toolbar-group" title="Criação de elementos do circuito">
           <span className="toolbar-group-label">Criar</span>
           <button className="btn btn-primary" onClick={onAddSubRegion} title="Adicionar uma sub-região padrão">
-            <span>＋</span> Sub-região
+            Sub-região
           </button>
           <button className="btn btn-accent" onClick={onOpenMultiHeliceModal} title="Adicionar sequência de sub-regiões de 1 rama e 2 nós">
-            <span>＋</span> Hélice Múltipla
+            Hélice Múltipla
           </button>
           <button
             className="btn"
@@ -53,6 +60,62 @@ export default function Toolbar({
             title="Abrir tabela para geração rápida de várias subs em sequência"
           >
             <span>📋</span> Lote
+          </button>
+          <button
+            className="btn"
+            onClick={onAddVoltageSource}
+            style={{ borderColor: 'rgba(255, 200, 87, 0.4)', background: 'rgba(255, 200, 87, 0.08)', color: 'var(--amber)' }}
+            title="Adicionar / posicionar Bloco de Fonte de Tensão (kV)"
+          >
+            <span>⚡</span> Fonte
+          </button>
+          <button
+            className="btn"
+            onClick={onAddEarth}
+            style={{ borderColor: 'rgba(89, 227, 145, 0.4)', background: 'rgba(89, 227, 145, 0.08)', color: 'var(--green)' }}
+            title="Adicionar Bloco de Terra / Referência (0 kV)"
+          >
+            <span>⏚</span> Terra
+          </button>
+        </div>
+
+        <div className="toolbar-divider" />
+
+        {/* Grupo: Conexões e Tabelas */}
+        <div className="toolbar-group" title="Operações de conexão e tabelas">
+          <span className="toolbar-group-label">Conexões / Tabelas</span>
+          <button
+            className="btn"
+            onClick={onClearSelection}
+            disabled={!selectedNode && !selectedConnectionId}
+            title={selectedConnectionId ? 'Desmarcar conexão selecionada' : 'Limpar ponto selecionado'}
+          >
+            Limpar
+          </button>
+          <button
+            className="btn"
+            onClick={() => {
+              if (selectedConnectionId && onDeleteSingleConnection) {
+                onDeleteSingleConnection(selectedConnectionId);
+              } else if (onDeleteConnection) {
+                onDeleteConnection();
+              }
+            }}
+            disabled={!selectedNode && !selectedConnectionId}
+            title={selectedConnectionId ? 'Remover conexão selecionada (Delete)' : 'Remover conexões do ponto selecionado'}
+          >
+            Desconectar
+          </button>
+          <button className="btn" onClick={onOpenConnectionTable} title="Ver mapa de potenciais e copiar conexões elétricas">
+            <span>📊</span> Conexões
+          </button>
+          <button
+            className="btn"
+            onClick={onOpenVoltageTable}
+            title="Ver tabela de nós com aplicação de tensão e aterramentos"
+            style={{ borderColor: 'rgba(255, 200, 87, 0.4)', background: 'rgba(255, 200, 87, 0.08)', color: 'var(--amber)' }}
+          >
+            <span>📊</span> Tensão
           </button>
         </div>
 
@@ -76,22 +139,6 @@ export default function Toolbar({
             title="Refazer (Ctrl+Y)"
           >
             ↪ Refazer
-          </button>
-        </div>
-
-        <div className="toolbar-divider" />
-
-        {/* Grupo: Conexões */}
-        <div className="toolbar-group" title="Operações de conexão">
-          <span className="toolbar-group-label">Conexões</span>
-          <button className="btn" onClick={onClearSelection} disabled={!selectedNode} title="Limpar ponto selecionado">
-            Limpar
-          </button>
-          <button className="btn" onClick={onDeleteConnection} disabled={!selectedNode} title="Remover conexões do ponto selecionado">
-            Desconectar
-          </button>
-          <button className="btn" onClick={onOpenTable} title="Ver mapa de potenciais e copiar conexões elétricas">
-            <span>📊</span> Tabela
           </button>
         </div>
 
@@ -127,9 +174,31 @@ export default function Toolbar({
         />
       </div>
 
-      <div className={`connection-status ${connectionMode ? 'active' : ''}`}>
-        <span className="status-dot" />
-        {connectionMode ? 'Selecione outro ponto de saída' : 'Pronto'}
+      <div className="topbar-right">
+        <div className={`connection-status ${connectionMode || selectedConnectionId ? 'active' : ''}`}>
+          <span className="status-dot" />
+          {connectionMode
+            ? 'Selecione outro ponto de saída'
+            : selectedConnectionId
+              ? 'Conexão selecionada • Pressione Delete para remover'
+              : 'Pronto'}
+        </div>
+
+        {onToggleSidebar && (
+          <button
+            type="button"
+            className={`sidebar-toggle-btn ${!isSidebarOpen ? 'sidebar-collapsed' : ''}`}
+            onClick={onToggleSidebar}
+            title={isSidebarOpen ? 'Recolher painel de propriedades' : 'Expandir painel de propriedades'}
+            aria-label={isSidebarOpen ? 'Recolher painel de propriedades' : 'Expandir painel de propriedades'}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+              <line x1="3" y1="6" x2="21" y2="6" />
+              <line x1="3" y1="12" x2="21" y2="12" />
+              <line x1="3" y1="18" x2="21" y2="18" />
+            </svg>
+          </button>
+        )}
       </div>
     </header>
   );

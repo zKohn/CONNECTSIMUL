@@ -49,6 +49,12 @@ input {
 
 button {
   color: inherit;
+  outline: none;
+}
+
+button:focus,
+button:focus-visible {
+  outline: none;
 }
 
 .app-shell {
@@ -228,7 +234,7 @@ button {
   flex: 1;
   min-width: 0;
   overflow-x: auto;
-  overflow-y: hidden;
+  overflow-y: auto;
   background:
     radial-gradient(circle at 50% 50%, rgba(69, 214, 255, .025), transparent 45%),
     #080b0f;
@@ -295,33 +301,175 @@ button {
 .connection-layer {
   position: absolute;
   inset: 0;
-  z-index: 5;
   width: 100%;
   height: 100%;
   overflow: visible;
   pointer-events: none;
 }
 
+.connection-layer--back {
+  z-index: 1; /* Camada visual atrás de qualquer estrutura não conectada (sub-regiões z-index: 4, fontes/terras z-index: 10) */
+}
+
+.connection-layer--front {
+  z-index: 6; /* Camada visual nos terminais: passa exclusivamente pela parte da sub-região que leva ao ponto de conexão */
+}
+
+.connection-group {
+  cursor: pointer;
+}
+
+.connection-hitarea {
+  fill: none;
+  stroke: transparent;
+  stroke-width: 24;
+  cursor: pointer;
+  pointer-events: stroke;
+}
+
+/* Conexão nó → nó (padrão, cyan) */
 .connection-path {
   fill: none;
   stroke: var(--cyan);
   stroke-width: 2.4;
   stroke-linecap: round;
   opacity: .86;
+  pointer-events: stroke;
+  cursor: pointer;
+  transition: stroke-width .15s ease, filter .15s ease, opacity .15s ease;
 }
-
 .connection-path-glow {
   fill: none;
   stroke: var(--cyan);
   stroke-width: 7;
   stroke-linecap: round;
   opacity: .12;
+  pointer-events: none;
+  transition: stroke-width .15s ease, opacity .15s ease;
+}
+
+/* Conexão nó → terra (green) */
+.connection-path--earth {
+  fill: none;
+  stroke: var(--green);
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  opacity: .86;
+  pointer-events: stroke;
+  cursor: pointer;
+  transition: stroke-width .15s ease, filter .15s ease, opacity .15s ease;
+}
+.connection-path-glow--earth {
+  fill: none;
+  stroke: var(--green);
+  stroke-width: 7;
+  stroke-linecap: round;
+  opacity: .15;
+  pointer-events: none;
+  transition: stroke-width .15s ease, opacity .15s ease;
+}
+
+/* Conexão nó → fonte de tensão (amber) */
+.connection-path--voltage {
+  fill: none;
+  stroke: var(--amber);
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  opacity: .86;
+  pointer-events: stroke;
+  cursor: pointer;
+  transition: stroke-width .15s ease, filter .15s ease, opacity .15s ease;
+}
+.connection-path-glow--voltage {
+  fill: none;
+  stroke: var(--amber);
+  stroke-width: 7;
+  stroke-linecap: round;
+  opacity: .15;
+  pointer-events: none;
+  transition: stroke-width .15s ease, opacity .15s ease;
 }
 
 .connection-endpoint {
   fill: #0b1117;
   stroke: var(--cyan);
   stroke-width: 2;
+  pointer-events: none;
+  transition: stroke .15s ease, fill .15s ease, r .15s ease;
+}
+.connection-endpoint--earth {
+  fill: #0b1117;
+  stroke: var(--green);
+  stroke-width: 2;
+  pointer-events: none;
+  transition: stroke .15s ease, fill .15s ease, r .15s ease;
+}
+.connection-endpoint--voltage {
+  fill: #0b1117;
+  stroke: var(--amber);
+  stroke-width: 2;
+  pointer-events: none;
+  transition: stroke .15s ease, fill .15s ease, r .15s ease;
+}
+
+/* Hover na conexão */
+.connection-group:hover .connection-path {
+  stroke-width: 3.6;
+  filter: brightness(1.25);
+  opacity: 1;
+}
+.connection-group:hover .connection-path-glow {
+  opacity: .35;
+  stroke-width: 10;
+}
+
+/* Conexão Selecionada (ativa para Delete) */
+.connection-group--selected .connection-path {
+  stroke: #ffffff !important;
+  stroke-width: 3.6 !important;
+  opacity: 1 !important;
+  stroke-dasharray: 7 4;
+  animation: connectionDash 1.2s linear infinite;
+  filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.9));
+}
+
+.connection-group--selected .connection-path-glow {
+  stroke: var(--cyan) !important;
+  stroke-width: 14 !important;
+  opacity: 0.55 !important;
+}
+
+.connection-group--selected .connection-path-glow--earth {
+  stroke: var(--green) !important;
+  stroke-width: 14 !important;
+  opacity: 0.55 !important;
+}
+
+.connection-group--selected .connection-path-glow--voltage {
+  stroke: var(--amber) !important;
+  stroke-width: 14 !important;
+  opacity: 0.55 !important;
+}
+
+.connection-group--selected .connection-endpoint {
+  stroke: #ffffff !important;
+  fill: var(--cyan) !important;
+}
+
+.connection-group--selected .connection-endpoint--earth {
+  stroke: #ffffff !important;
+  fill: var(--green) !important;
+}
+
+.connection-group--selected .connection-endpoint--voltage {
+  stroke: #ffffff !important;
+  fill: var(--amber) !important;
+}
+
+@keyframes connectionDash {
+  to {
+    stroke-dashoffset: -22;
+  }
 }
 
 .subregion {
@@ -330,7 +478,7 @@ button {
   user-select: none;
   border: 1px solid #2a3540;
   border-radius: 16px;
-  background: linear-gradient(145deg, rgba(22, 28, 36, .98), rgba(11, 15, 20, .98));
+  background: linear-gradient(145deg, #161c24, #0b0f14);
   box-shadow: var(--shadow), inset 0 1px 0 rgba(255, 255, 255, .035);
   overflow: visible;
   cursor: grab;
@@ -362,7 +510,7 @@ button {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0 14px;
+  padding: 0 8px;
   border-bottom: 1px solid rgba(255, 255, 255, .06);
 }
 
@@ -370,25 +518,38 @@ button {
   display: block;
   color: #697684;
   font-family: "JetBrains Mono", monospace;
-  font-size: 9px;
-  letter-spacing: .12em;
+  font-size: 8px;
+  letter-spacing: .08em;
   font-weight: 600;
 }
 
 .subregion-header strong {
   display: block;
   margin-top: 1px;
-  font-size: 14px;
+  font-size: 13px;
 }
 
 .branch-chip {
-  padding: 5px 7px;
+  padding: 2px 4px;
   border: 1px solid rgba(69, 214, 255, .18);
-  border-radius: 7px;
+  border-radius: 6px;
   color: var(--cyan);
   background: rgba(69, 214, 255, .06);
   font-family: "JetBrains Mono", monospace;
-  font-size: 10px;
+  font-size: 9px;
+  white-space: nowrap;
+}
+
+.subregion-footer {
+  height: 28px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 8px;
+  font-size: 9px;
+  font-family: "JetBrains Mono", monospace;
+  color: var(--muted);
+  border-top: 1px solid rgba(255, 255, 255, .04);
 }
 
 .subregion-body {
@@ -411,29 +572,35 @@ button {
 .node-terminal {
   position: absolute;
   left: 50%;
-  width: 220px;
+  width: 150px;
   height: 28px;
   transform: translate(-50%, -50%);
   border: 0;
+  outline: none;
   padding: 0;
   background: transparent;
   cursor: pointer;
   z-index: 8;
 }
 
+.node-terminal:focus,
+.node-terminal:focus-visible {
+  outline: none !important;
+}
+
 .node-badge {
   position: absolute;
-  left: 108px;
+  left: 50%;
   top: 50%;
-  transform: translateY(-50%);
-  min-width: 54px;
-  padding: 4px 8px;
+  transform: translate(-50%, -50%);
+  min-width: 48px;
+  padding: 3px 6px;
   border: 1px solid #334155;
   border-radius: 6px;
   background: #090e14;
   color: #f1f5f9;
   font-family: "JetBrains Mono", monospace;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 700;
   text-align: center;
   letter-spacing: 0.02em;
@@ -486,7 +653,7 @@ button {
 }
 
 .node-dot.right {
-  left: 200px;
+  left: 138px;
 }
 
 .node-port-ring {
@@ -506,14 +673,14 @@ button {
 }
 
 .node-port-ring.right {
-  left: 200px;
+  left: 138px;
 }
 
 .node-output:hover .node-badge {
   color: var(--cyan);
   border-color: rgba(69, 214, 255, .6);
   background: rgba(69, 214, 255, .12);
-  transform: translateY(-50%) translateX(-3px);
+  transform: translate(-50%, -50%) scale(1.05);
 }
 
 .node-output:hover .node-dot {
@@ -1302,4 +1469,408 @@ td {
   .output-count {
     right: 12px;
   }
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+/* ──────────────────────────────────────────────────────────────────────────
+   PINOS TRIANGULARES: FONTE DE TENSÃO E TERRA (ESTILO MULTISIM)
+   ────────────────────────────────────────────────────────────────────────── */
+.triangular-pin {
+  width: 48px;
+  height: 48px;
+  user-select: none;
+  z-index: 10;
+  cursor: grab;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform .16s ease, filter .16s ease;
+  filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.5));
+}
+
+.triangular-pin:active {
+  cursor: grabbing;
+  transform: scale(1.04);
+}
+
+.triangular-pin--voltage {
+  color: var(--amber);
+}
+
+.triangular-pin--earth {
+  color: var(--green);
+}
+
+.triangular-pin:hover .pin-symbol-svg {
+  filter: brightness(1.2) drop-shadow(0 0 8px currentColor);
+}
+
+.triangular-pin--selected {
+  filter: drop-shadow(0 0 12px currentColor);
+}
+
+.triangular-pin--selected .pin-symbol-svg polygon {
+  stroke-width: 3.2;
+  filter: drop-shadow(0 0 6px currentColor);
+}
+
+.pin-symbol-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  overflow: visible;
+  transition: filter .16s ease;
+}
+
+.pin-port-terminal {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  transform: translate(-50%, -50%);
+  border: 0;
+  outline: none;
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+  z-index: 6;
+  border-radius: 50%;
+}
+
+.pin-port-terminal:focus,
+.pin-port-terminal:focus-visible {
+  outline: none !important;
+}
+
+.triangular-pin--voltage .pin-port-terminal {
+  left: 24px;
+  top: 38px;
+}
+
+.triangular-pin--earth .pin-port-terminal {
+  left: 24px;
+  top: 10px;
+}
+
+.pin-port-terminal .node-dot {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 12px;
+  height: 12px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: #081016;
+  transition: transform .16s ease, box-shadow .16s ease;
+  pointer-events: none;
+}
+
+.triangular-pin--voltage .pin-port-terminal .node-dot {
+  border: 2px solid var(--amber);
+  box-shadow: 0 0 8px rgba(255, 200, 87, .4);
+}
+
+.triangular-pin--earth .pin-port-terminal .node-dot {
+  border: 2px solid var(--green);
+  box-shadow: 0 0 8px rgba(89, 227, 145, .4);
+}
+
+.pin-port-terminal .node-port-ring {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 20px;
+  height: 20px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  border: 1px dashed rgba(255, 255, 255, .4);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .16s ease;
+}
+
+.pin-port-terminal:hover .node-port-ring {
+  opacity: 1;
+}
+
+.pin-port-terminal .node-dot.connected {
+  background: #fff !important;
+  box-shadow: 0 0 8px currentColor !important;
+}
+
+.pin-port--selected .node-dot {
+  background: #fff !important;
+  transform: translate(-50%, -50%) scale(1.25);
+  box-shadow: 0 0 12px #fff !important;
+}
+
+/* Rótulo de tensão visível na tela inicial */
+.pin-voltage-badge {
+  position: absolute;
+  background: rgba(10, 14, 19, 0.94);
+  border: 1px solid rgba(255, 200, 87, 0.45);
+  color: var(--amber);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 5px;
+  white-space: nowrap;
+  pointer-events: none;
+  user-select: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+  letter-spacing: 0.4px;
+  z-index: 3;
+}
+
+.pin-voltage-badge.rot-0 {
+  top: -24px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.pin-voltage-badge.rot-90 {
+  top: 50%;
+  left: calc(100% + 8px);
+  transform: translateY(-50%);
+}
+
+.pin-voltage-badge.rot-180 {
+  top: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.pin-voltage-badge.rot-270 {
+  top: 50%;
+  right: calc(100% + 8px);
+  transform: translateY(-50%);
+}
+
+/* Container retrátil da barra lateral com animação suave de 0.2s */
+.properties-panel-wrapper {
+  display: flex;
+  width: 286px;
+  flex: 0 0 286px;
+  transition: width 0.2s ease, flex-basis 0.2s ease, opacity 0.2s ease;
+  overflow: hidden;
+  z-index: 12;
+}
+
+.properties-panel-wrapper.collapsed {
+  width: 0 !important;
+  flex: 0 0 0px !important;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.properties-panel-wrapper .properties-panel {
+  width: 286px;
+  min-width: 286px;
+  height: 100%;
+}
+
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+/* Botão sanduíche fixo no topo direito para recolher/expandir detalhes */
+.sidebar-toggle-btn {
+  position: static;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #10151b;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  color: #cbd5df;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease, transform 0.18s ease;
+}
+
+.sidebar-toggle-btn:hover {
+  background: #161c23;
+  border-color: #3b4652;
+  color: #fff;
+  transform: translateY(-1px);
+}
+
+.sidebar-toggle-btn.sidebar-collapsed {
+  border-color: rgba(69, 214, 255, 0.4);
+  color: var(--cyan);
+  background: rgba(69, 214, 255, 0.08);
+}
+
+/* Remover setas verticais (spinners) em inputs numéricos */
+.no-spinner-input::-webkit-outer-spin-button,
+.no-spinner-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  appearance: none;
+  margin: 0;
+}
+
+.no-spinner-input[type=number] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+.earth-terminal.terminal-connected {
+  background: rgba(89, 227, 145, .14);
+  border: 1px solid rgba(89, 227, 145, .6);
+}
+
+.earth-terminal-badge {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--green);
+  letter-spacing: 0.5px;
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   WRAPPER DE TABELAS (TABELA DE CONEXÕES + TABELA DE TENSÃO)
+   ────────────────────────────────────────────────────────────────────────── */
+.tables-wrapper {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+  gap: 24px;
+  padding: 30px;
+  background: rgba(0, 0, 0, .72);
+  backdrop-filter: blur(8px);
+  overflow: auto;
+}
+
+.tables-wrapper .table-overlay {
+  position: static;
+  inset: auto;
+  z-index: auto;
+  display: block;
+  padding: 0;
+  background: transparent;
+}
+
+.tables-wrapper .table-modal {
+  width: min(640px, 46vw);
+}
+
+@media (max-width: 1100px) {
+  .tables-wrapper {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .tables-wrapper .table-modal {
+    width: 100%;
+  }
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   MODAL DE CONFIGURAÇÃO DE TENSÃO (VOLTAGE SOURCE MODAL)
+   ────────────────────────────────────────────────────────────────────────── */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  padding: 24px;
+  border-radius: 12px;
+  width: 480px;
+  max-width: 90vw;
+  box-shadow: var(--shadow);
+}
+
+.modal-content h2 {
+  margin: 0 0 18px;
+  font-size: 16px;
+  color: var(--text);
+}
+
+.voltage-form label {
+  display: block;
+  margin-bottom: 14px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.voltage-form select,
+.voltage-form input[type="number"] {
+  width: 100%;
+  padding: 8px 10px;
+  margin-top: 6px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--panel-2);
+  color: var(--text);
+  font-family: inherit;
+}
+
+.grounded-set {
+  margin-top: 16px;
+  border: 1px solid var(--border);
+  padding: 12px;
+  border-radius: 6px;
+}
+
+.grounded-set legend {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  padding: 0 6px;
+}
+
+.grounded-checkbox {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.grounded-checkbox input {
+  margin-right: 8px;
+}
+
+.modal-actions {
+  margin-top: 22px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.modal-actions button {
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.modal-actions button[type="submit"] {
+  background: var(--green);
+  color: #05140b;
+  border: none;
+}
+
+.modal-actions button[type="button"] {
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid var(--border);
 }

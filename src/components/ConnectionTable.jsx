@@ -45,7 +45,7 @@ export default function ConnectionTable({ rows, onClose }) {
   }
 
   return (
-    <div className="table-overlay">
+    <div className="table-overlay" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <section className="table-modal">
         <div className="table-header">
           <div>

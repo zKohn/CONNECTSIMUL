@@ -7,6 +7,8 @@ export default function NodeTerminal({ node, globalNumber, selected, connected, 
       className={`node-terminal node-output ${selected ? 'node-selected' : ''} ${connected ? 'node-connected' : ''} ${isCenter ? 'node-center' : ''}`}
       style={{ top }}
       title={`Ponto ${node.polarity || ''}${globalNumber}${isCenter ? ' (Nó Central)' : ''} • ${connected ? 'Conectado' : 'Sem conexão'} • clique para conectar`}
+      onMouseDown={(e) => e.stopPropagation()}
+      onPointerDown={(e) => e.stopPropagation()}
       onClick={(event) => {
         event.stopPropagation();
         onClick(node);

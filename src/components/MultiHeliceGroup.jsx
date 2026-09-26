@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { buildSubRegionNodes } from '../model/electricalModel';
 import NodeTerminal from './NodeTerminal';
 
-const WIDTH = 220;
+const WIDTH = 200;
 const HEADER_HEIGHT = 56;
 const FOOTER_HEIGHT = 28;
 const TOP_PADDING = 24;
@@ -61,8 +61,8 @@ export function getMultiHelicePortPoint(groupSubs, nodeNumber, connections = [])
   const y = HEADER_HEIGHT + (bottom - targetIndex * NODE_SPACING);
 
   return {
-    leftX: firstSub.x + 12,
-    rightX: firstSub.x + 200,
+    leftX: firstSub.x + 37,
+    rightX: firstSub.x + WIDTH - 37,
     y: firstSub.y + y,
   };
 }

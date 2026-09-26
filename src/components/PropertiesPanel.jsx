@@ -1,13 +1,139 @@
 import React from 'react';
 import { MAX_OPENINGS, resizeBranches } from '../model/electricalModel';
 
-export default function PropertiesPanel({ subRegion, onChange, onClose, onDelete, onOpenGroupDetail }) {
+export default function PropertiesPanel({
+  subRegion,
+  onChange,
+  onClose,
+  onDelete,
+  onOpenGroupDetail,
+  onUpdateVoltageValue,
+  onRotate,
+}) {
   if (!subRegion) {
     return (
       <aside className="properties-panel empty-panel">
         <div className="panel-icon">⌁</div>
-        <h2>Nenhuma sub-região selecionada</h2>
-        <p>Selecione um retângulo para editar ramas, polaridade e demais propriedades.</p>
+        <h2>Nenhum elemento selecionado</h2>
+        <p>Selecione uma sub-região ou um pino (fonte / terra) para editar suas propriedades.</p>
+      </aside>
+    );
+  }
+
+  if (subRegion.type === 'voltage-source') {
+    return (
+      <aside className="properties-panel">
+        <div className="panel-title-row">
+          <div>
+            <span className="eyebrow" style={{ color: 'var(--amber)' }}>FONTE DE TENSÃO</span>
+            <h2>{subRegion.voltageValue || '0'} kV</h2>
+          </div>
+          <button className="icon-btn" onClick={onClose} aria-label="Fechar">×</button>
+        </div>
+
+        <label className="field" style={{ marginTop: '16px' }}>
+          <span>Nível de tensão aplicada (kV)</span>
+          <input
+            type="number"
+            step="any"
+            className="no-spinner-input"
+            value={subRegion.voltageValue ?? ''}
+            onChange={(e) => onUpdateVoltageValue ? onUpdateVoltageValue(e.target.value) : onChange({ ...subRegion, voltageValue: e.target.value })}
+            placeholder="Ex: 650"
+          />
+        </label>
+
+        <div className="property-card" style={{ marginTop: '12px' }}>
+          <div>
+            <strong style={{ color: 'var(--amber)' }}>{subRegion.isConnected ? 'Conectada' : 'Livre'}</strong>
+            <span>status</span>
+          </div>
+          <div>
+            <strong>{subRegion.connectedNodeLabel || '—'}</strong>
+            <span>ponto conectado</span>
+          </div>
+        </div>
+
+        <p className="hint">
+          {subRegion.isConnected
+            ? `Tensão de ${subRegion.voltageValue || '0'} kV aplicada ao ponto ${subRegion.connectedNodeLabel}.`
+            : 'Clique no terminal do pino de fonte e depois no terminal de uma sub-região para conectá-los.'}
+        </p>
+
+        <div style={{ display: 'flex', gap: '8px', marginTop: '20px' }}>
+          {onRotate && (
+            <button
+              type="button"
+              className="btn btn-secondary"
+              style={{ flex: 1 }}
+              onClick={onRotate}
+              title="Girar pino 90 graus (tecla R)"
+            >
+              ⟳ Girar (R)
+            </button>
+          )}
+          <button
+            type="button"
+            className="btn btn-danger"
+            style={{ flex: 1 }}
+            onClick={onDelete}
+          >
+            Deletar
+          </button>
+        </div>
+      </aside>
+    );
+  }
+
+  if (subRegion.type === 'earth') {
+    return (
+      <aside className="properties-panel">
+        <div className="panel-title-row">
+          <div>
+            <span className="eyebrow" style={{ color: 'var(--green)' }}>TERRA / REFERÊNCIA</span>
+            <h2>0.0 kV (Terra)</h2>
+          </div>
+          <button className="icon-btn" onClick={onClose} aria-label="Fechar">×</button>
+        </div>
+
+        <div className="property-card" style={{ marginTop: '16px' }}>
+          <div>
+            <strong style={{ color: 'var(--green)' }}>{subRegion.isConnected ? 'Aterrado' : 'Livre'}</strong>
+            <span>status</span>
+          </div>
+          <div>
+            <strong>{subRegion.connectedNodeLabel || '—'}</strong>
+            <span>ponto aterrado</span>
+          </div>
+        </div>
+
+        <p className="hint">
+          {subRegion.isConnected
+            ? `Ponto ${subRegion.connectedNodeLabel} definido como referência de potencial zero (0 kV).`
+            : 'Clique no terminal do pino de terra e depois em um nó de sub-região para aterrá-lo.'}
+        </p>
+
+        <div style={{ display: 'flex', gap: '8px', marginTop: '20px' }}>
+          {onRotate && (
+            <button
+              type="button"
+              className="btn btn-secondary"
+              style={{ flex: 1 }}
+              onClick={onRotate}
+              title="Girar pino 90 graus (tecla R)"
+            >
+              ⟳ Girar (R)
+            </button>
+          )}
+          <button
+            type="button"
+            className="btn btn-danger"
+            style={{ flex: 1 }}
+            onClick={onDelete}
+          >
+            Deletar
+          </button>
+        </div>
       </aside>
     );
   }

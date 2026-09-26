@@ -60,32 +60,73 @@ export function createUnionFind(items) {
   return { find, union, groups };
 }
 
-export function buildConnectivity(subRegions, externalConnections) {
+export function getElectricalGroups(subRegions, externalConnections) {
   const allNodes = buildGlobalNodeOrder(subRegions);
-  const uf = createUnionFind(allNodes.map((node) => node.id));
+  const subNodeIdSet = new Set(allNodes.map((node) => node.id));
 
-  // O usuário quer que APENAS as conexões físicas feitas por ele apareçam na tabela
-  // Por isso, ignoramos a continuidade interna (ramas) da sub-região.
+  const allIds = new Set(subNodeIdSet);
+  for (const connection of externalConnections) {
+    allIds.add(connection.from);
+    allIds.add(connection.to);
+  }
+
+  const uf = createUnionFind(Array.from(allIds));
   for (const connection of externalConnections) {
     uf.union(connection.from, connection.to);
   }
 
-  const groups = uf.groups();
+  const allGroups = uf.groups();
 
-  // Filtrar apenas grupos que possuem mais de 1 ponto (ou seja, que de fato estão conectados)
-  const connectedGroups = groups.filter(group => group.length > 1);
+  const isEarth = (id) =>
+    typeof id === 'string' && (id.startsWith('earth') || id.includes('earth'));
 
-  return connectedGroups
-    .map((group) => group.sort((a, b) => {
-      const ai = allNodes.findIndex((n) => n.id === a);
-      const bi = allNodes.findIndex((n) => n.id === b);
-      return ai - bi;
-    }))
+  const groundedSubNodeIds = [];
+  const ungroundedConnectedGroups = [];
+
+  for (const group of allGroups) {
+    const hasEarth = group.some(isEarth);
+    const subNodesInGroup = group.filter((id) => subNodeIdSet.has(id));
+
+    if (hasEarth) {
+      // Qualquer nó de sub-região conectado ao terra (direta ou indiretamente) é aterrado
+      groundedSubNodeIds.push(...subNodesInGroup);
+    } else {
+      // Apenas grupos sem ligação com o terra e com mais de 1 ponto constam na tabela comum
+      if (subNodesInGroup.length > 1) {
+        ungroundedConnectedGroups.push(subNodesInGroup);
+      }
+    }
+  }
+
+  groundedSubNodeIds.sort((a, b) => {
+    const ai = allNodes.findIndex((n) => n.id === a);
+    const bi = allNodes.findIndex((n) => n.id === b);
+    return ai - bi;
+  });
+
+  const sortedUngroundedGroups = ungroundedConnectedGroups
+    .map((group) =>
+      group.sort((a, b) => {
+        const ai = allNodes.findIndex((n) => n.id === a);
+        const bi = allNodes.findIndex((n) => n.id === b);
+        return ai - bi;
+      })
+    )
     .sort((a, b) => {
       const ai = allNodes.findIndex((n) => n.id === a[0]);
       const bi = allNodes.findIndex((n) => n.id === b[0]);
       return ai - bi;
     });
+
+  return {
+    groundedSubNodeIds,
+    ungroundedConnectedGroups: sortedUngroundedGroups,
+  };
+}
+
+export function buildConnectivity(subRegions, externalConnections) {
+  const { ungroundedConnectedGroups } = getElectricalGroups(subRegions, externalConnections);
+  return ungroundedConnectedGroups;
 }
 
 export function validateConnectivity(subRegions, externalConnections) {
@@ -93,8 +134,14 @@ export function validateConnectivity(subRegions, externalConnections) {
   const seen = new Set();
   const errors = [];
 
+  const isSpecialTerminal = (id) =>
+    id === 'voltage-source-terminal' ||
+    (typeof id === 'string' && id.startsWith('earth-'));
+
   for (const connection of externalConnections) {
-    if (!nodeIds.has(connection.from) || !nodeIds.has(connection.to)) {
+    const fromValid = nodeIds.has(connection.from) || isSpecialTerminal(connection.from);
+    const toValid = nodeIds.has(connection.to) || isSpecialTerminal(connection.to);
+    if (!fromValid || !toValid) {
       errors.push(`Conexão inválida: ${connection.from} → ${connection.to}.`);
     }
 

@@ -12,7 +12,12 @@ import { buildGlobalNumberMap, buildGlobalBranchMap } from './model/nodeNumberin
 import {
   buildTableRows,
   validateConnectivity,
+  getElectricalGroups,
 } from './model/connectivity';
+
+
+import VoltageTable from './components/VoltageTable';
+import VoltageSourceModal from './components/VoltageSourceModal';
 import SubRegionDetail from './components/SubRegionDetail';
 import MultiHeliceModal from './components/MultiHeliceModal';
 import MultiHeliceDetail from './components/MultiHeliceDetail';
@@ -40,6 +45,24 @@ function makeInitialState() {
       }),
     ],
     connections: [],
+    voltageConfig: {
+      appliedNodeId: null,
+      voltageValue: '13.8',
+      groundedNodeIds: [],
+      source: {
+        id: 'voltage-source',
+        x: 80,
+        y: 360,
+        enabled: true,
+      },
+      earths: [
+        {
+          id: 'earth-1',
+          x: 80,
+          y: 490,
+        },
+      ],
+    },
   };
 }
 
@@ -55,16 +78,20 @@ export default function App() {
     canRedo,
   } = useHistory(makeInitialState());
 
-  const { subRegions, connections } = state;
+  const { subRegions, connections, voltageConfig } = state;
 
   const [selectedSubRegionId, setSelectedSubRegionId] = useState(null);
+  const [selectedConnectionId, setSelectedConnectionId] = useState(null);
+  const [showVoltageModal, setShowVoltageModal] = useState(false);
   const [selectedNode, setSelectedNode] = useState(null);
-  const [showTable, setShowTable] = useState(false);
+  const [showConnectionTable, setShowConnectionTable] = useState(false);
+  const [showVoltageTable, setShowVoltageTable] = useState(false);
   const [showMultiHeliceModal, setShowMultiHeliceModal] = useState(false);
   const [showBatchModal, setShowBatchModal] = useState(false);
   const [notice, setNotice] = useState(null);
   const [detailSubRegionId, setDetailSubRegionId] = useState(null);
   const [detailMultiHeliceGroupId, setDetailMultiHeliceGroupId] = useState(null);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   const globalNumbers = useMemo(
     () => buildGlobalNumberMap(subRegions),
@@ -76,13 +103,75 @@ export default function App() {
     [subRegions]
   );
 
+  const { groundedSubNodeIds } = useMemo(
+    () => getElectricalGroups(subRegions, connections),
+    [subRegions, connections]
+  );
+
   const rows = useMemo(
     () => buildTableRows(subRegions, connections),
     [subRegions, connections]
   );
 
+  const allNodes = useMemo(() => subRegions.flatMap((s) => buildSubRegionNodes(s)), [subRegions]);
+  const nodeMap = useMemo(() => new Map(allNodes.map((n) => [n.id, n])), [allNodes]);
+
+  const formatNodeLabel = useCallback((nodeId) => {
+    if (!nodeId) return '';
+    const node = nodeMap.get(nodeId);
+    if (!node) return nodeId;
+    const gNum = globalNumbers.get(nodeId) ?? node.number;
+    return `${node.polarity || ''}${gNum}`;
+  }, [nodeMap, globalNumbers]);
+
+  const vsConnection = useMemo(() => {
+    return connections.find(
+      (c) => c.fromSubRegionId === 'voltage-source' || c.toSubRegionId === 'voltage-source'
+    );
+  }, [connections]);
+
+  const vsConnectedNodeId = vsConnection
+    ? (vsConnection.fromSubRegionId === 'voltage-source' ? vsConnection.to : vsConnection.from)
+    : null;
+
+  const earthConnectionMap = useMemo(() => {
+    const map = new Map();
+    for (const c of connections) {
+      if (c.fromSubRegionId && c.fromSubRegionId.startsWith('earth')) {
+        map.set(c.fromSubRegionId, c.to);
+      } else if (c.toSubRegionId && c.toSubRegionId.startsWith('earth')) {
+        map.set(c.toSubRegionId, c.from);
+      }
+    }
+    return map;
+  }, [connections]);
+
   const selectedSubRegion = useMemo(() => {
     if (!selectedSubRegionId) return null;
+    if (selectedSubRegionId === 'voltage-source') {
+      return {
+        id: 'voltage-source',
+        type: 'voltage-source',
+        name: 'Fonte de Tensão',
+        voltageValue: voltageConfig?.voltageValue,
+        rotation: voltageConfig?.source?.rotation || 0,
+        isConnected: Boolean(vsConnectedNodeId),
+        connectedNodeLabel: formatNodeLabel(vsConnectedNodeId),
+      };
+    }
+    if (selectedSubRegionId.startsWith('earth')) {
+      const earth = (voltageConfig?.earths || []).find((e) => e.id === selectedSubRegionId);
+      const connNodeId = earthConnectionMap.get(selectedSubRegionId);
+      return {
+        id: selectedSubRegionId,
+        type: 'earth',
+        name: 'Ponto de Terra (0 kV)',
+        rotation: earth?.rotation || 0,
+        earth,
+        isConnected: Boolean(connNodeId),
+        connectedNodeLabel: formatNodeLabel(connNodeId),
+      };
+    }
     if (selectedSubRegionId.startsWith('helice-group')) {
       const groupSubs = subRegions.filter((s) => s.groupId === selectedSubRegionId);
       if (groupSubs.length === 0) return null;
@@ -98,7 +187,53 @@ export default function App() {
       };
     }
     return subRegions.find((s) => s.id === selectedSubRegionId) || null;
-  }, [subRegions, selectedSubRegionId]);
+  }, [subRegions, selectedSubRegionId, voltageConfig, vsConnectedNodeId, earthConnectionMap, formatNodeLabel]);
+
+  function handleDeleteSelected(idToDelete) {
+    const id = idToDelete || selectedSubRegionId;
+    if (!id) return;
+    if (id === 'voltage-source') {
+      deleteVoltageSource();
+      setSelectedSubRegionId(null);
+    } else if (typeof id === 'string' && id.startsWith('earth')) {
+      deleteEarth(id);
+      setSelectedSubRegionId(null);
+    } else {
+      deleteSubRegion(id);
+    }
+  }
+
+  const rotateSelectedPin = React.useCallback(() => {
+    if (!selectedSubRegionId) return;
+    if (selectedSubRegionId === 'voltage-source') {
+      setState((prev) => ({
+        ...prev,
+        voltageConfig: {
+          ...prev.voltageConfig,
+          source: {
+            ...(prev.voltageConfig?.source || { id: 'voltage-source', x: 80, y: 390 }),
+            rotation: (((prev.voltageConfig?.source?.rotation || 0) + 90) % 360),
+          },
+        },
+      }));
+      commit();
+      setNotice('Fonte de tensão rotacionada (90°).');
+    } else if (typeof selectedSubRegionId === 'string' && selectedSubRegionId.startsWith('earth')) {
+      setState((prev) => ({
+        ...prev,
+        voltageConfig: {
+          ...prev.voltageConfig,
+          earths: (prev.voltageConfig?.earths || []).map((e) =>
+            e.id === selectedSubRegionId
+              ? { ...e, rotation: (((e.rotation || 0) + 90) % 360) }
+              : e
+          ),
+        },
+      }));
+      commit();
+      setNotice('Ponto de terra rotacionado (90°).');
+    }
+  }, [selectedSubRegionId, setState, commit, setNotice]);
 
   // ── Keyboard shortcuts ──────────────────────────────────────────────────────
   React.useEffect(() => {
@@ -117,16 +252,46 @@ export default function App() {
         redo();
         return;
       }
-      // Delete sub-region
+      // Rotate selected pin: 'r' or 'R'
+      if ((e.key === 'r' || e.key === 'R') && selectedSubRegionId) {
+        if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
+          if (selectedSubRegionId === 'voltage-source' || selectedSubRegionId.startsWith('earth')) {
+            e.preventDefault();
+            rotateSelectedPin();
+            return;
+          }
+        }
+      }
+      // Delete connection
+      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedConnectionId) {
+        if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
+          e.preventDefault();
+          deleteSingleConnection(selectedConnectionId);
+          return;
+        }
+      }
+      // Delete selected sub-region, voltage source, or earth pin
       if (e.key === 'Delete' && selectedSubRegionId) {
         if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
-          deleteSubRegion(selectedSubRegionId);
+          handleDeleteSelected(selectedSubRegionId);
+          return;
         }
+      }
+      // Escape: limpar seleções (mesmo sentido de clicar em LIMPAR)
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        if (document.activeElement && typeof document.activeElement.blur === 'function') {
+          document.activeElement.blur();
+        }
+        setSelectedNode(null);
+        setSelectedConnectionId(null);
+        setSelectedSubRegionId(null);
+        setNotice(null);
       }
     }
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedSubRegionId, undo, redo]);
+  }, [selectedSubRegionId, selectedConnectionId, undo, redo, deleteSingleConnection, deleteSubRegion, deleteVoltageSource, deleteEarth, rotateSelectedPin]);
 
   // ── Handlers ────────────────────────────────────────────────────────────────
 
@@ -212,6 +377,7 @@ export default function App() {
     }
 
     setState((prev) => ({
+      ...prev,
       subRegions: [...prev.subRegions, ...newSubs],
       connections: [...prev.connections, ...newConnections],
     }));
@@ -312,6 +478,7 @@ export default function App() {
     });
 
     setState((prev) => ({
+      ...prev,
       subRegions: [...prev.subRegions, ...allNewSubs],
       connections: [...prev.connections, ...allNewConnections],
     }));
@@ -366,6 +533,152 @@ export default function App() {
     commit();
   }
 
+  function deriveVoltageNodesFromConnections(conns) {
+    let appliedNodeId = null;
+    const vsConn = conns.find(
+      (c) => c.fromSubRegionId === 'voltage-source' || c.toSubRegionId === 'voltage-source'
+    );
+    if (vsConn) {
+      appliedNodeId = vsConn.fromSubRegionId === 'voltage-source' ? vsConn.to : vsConn.from;
+    }
+
+    const { groundedSubNodeIds: grounded } = getElectricalGroups(subRegions, conns);
+
+    return { appliedNodeId, groundedNodeIds: grounded };
+  }
+
+  function addVoltageSource() {
+    setState((prev) => {
+      if (prev.voltageConfig?.source && prev.voltageConfig.source.enabled !== false) {
+        setNotice('A fonte de tensão já está posicionada no workspace.');
+        return prev;
+      }
+      setNotice('Fonte de tensão adicionada ao workspace.');
+      return {
+        ...prev,
+        voltageConfig: {
+          ...prev.voltageConfig,
+          source: {
+            id: 'voltage-source',
+            x: 80,
+            y: 360,
+            enabled: true,
+          },
+        },
+      };
+    });
+    commit();
+  }
+
+  function deleteVoltageSource() {
+    setState((prev) => {
+      const remainingConnections = prev.connections.filter(
+        (c) => c.fromSubRegionId !== 'voltage-source' && c.toSubRegionId !== 'voltage-source'
+      );
+      const { appliedNodeId, groundedNodeIds } = deriveVoltageNodesFromConnections(remainingConnections);
+      return {
+        ...prev,
+        connections: remainingConnections,
+        voltageConfig: {
+          ...prev.voltageConfig,
+          appliedNodeId,
+          groundedNodeIds,
+          source: null,
+        },
+      };
+    });
+    commit();
+    setNotice('Fonte de tensão removida.');
+  }
+
+  function updateVoltageSourcePosition(x, y) {
+    setStateNoHistory((prev) => ({
+      ...prev,
+      voltageConfig: {
+        ...prev.voltageConfig,
+        source: {
+          ...(prev.voltageConfig.source || { id: 'voltage-source' }),
+          x,
+          y,
+          enabled: true,
+        },
+      },
+    }));
+  }
+
+  function commitVoltagePosition() {
+    commit();
+  }
+
+  function updateVoltageValue(value) {
+    setState((prev) => ({
+      ...prev,
+      voltageConfig: {
+        ...prev.voltageConfig,
+        voltageValue: value,
+      },
+    }));
+  }
+
+  function addEarth() {
+    const newId = `earth-${Date.now()}`;
+    setState((prev) => {
+      const currentEarths = prev.voltageConfig?.earths || [];
+      const newEarth = {
+        id: newId,
+        x: 80,
+        y: 490 + currentEarths.length * 85,
+      };
+      return {
+        ...prev,
+        voltageConfig: {
+          ...prev.voltageConfig,
+          earths: [...currentEarths, newEarth],
+        },
+      };
+    });
+    commit();
+    setNotice('Bloco de terra (referência) adicionado ao workspace.');
+  }
+
+  function deleteEarth(earthId) {
+    setState((prev) => {
+      const remainingEarths = (prev.voltageConfig?.earths || []).filter((e) => e.id !== earthId);
+      const remainingConnections = prev.connections.filter(
+        (c) => c.fromSubRegionId !== earthId && c.toSubRegionId !== earthId
+      );
+      const { appliedNodeId, groundedNodeIds } = deriveVoltageNodesFromConnections(remainingConnections);
+      return {
+        ...prev,
+        connections: remainingConnections,
+        voltageConfig: {
+          ...prev.voltageConfig,
+          appliedNodeId,
+          groundedNodeIds,
+          earths: remainingEarths,
+        },
+      };
+    });
+    commit();
+    setNotice('Bloco de terra removido.');
+  }
+
+  function updateEarthPosition(id, x, y) {
+    setStateNoHistory((prev) => ({
+      ...prev,
+      voltageConfig: {
+        ...prev.voltageConfig,
+        earths: (prev.voltageConfig.earths || []).map((e) =>
+          e.id === id ? { ...e, x, y } : e
+        ),
+      },
+    }));
+  }
+
+  function commitEarthPosition() {
+    commit();
+  }
+
   function deleteSubRegion(id) {
     const isGroup = id && id.startsWith('helice-group');
     const targetSubIds = new Set(
@@ -374,21 +687,65 @@ export default function App() {
         .map((s) => s.id)
     );
 
-    setState((prev) => ({
-      subRegions: prev.subRegions.filter((sub) => !targetSubIds.has(sub.id)),
-      connections: prev.connections.filter(
+    setState((prev) => {
+      const remainingConnections = prev.connections.filter(
         (conn) => !targetSubIds.has(conn.fromSubRegionId) && !targetSubIds.has(conn.toSubRegionId)
-      ),
-    }));
+      );
+      const { appliedNodeId, groundedNodeIds } = deriveVoltageNodesFromConnections(remainingConnections);
+
+      return {
+        ...prev,
+        subRegions: prev.subRegions.filter((sub) => !targetSubIds.has(sub.id)),
+        connections: remainingConnections,
+        voltageConfig: {
+          ...prev.voltageConfig,
+          appliedNodeId,
+          groundedNodeIds,
+        },
+      };
+    });
     if (selectedSubRegionId === id) setSelectedSubRegionId(null);
+  }
+
+  function selectConnection(connectionId) {
+    setSelectedConnectionId(connectionId);
+    if (connectionId) {
+      setSelectedNode(null);
+      setSelectedSubRegionId(null);
+    }
+  }
+
+  function deleteSingleConnection(connId) {
+    const targetId = connId || selectedConnectionId;
+    if (!targetId) return;
+
+    setState((prev) => {
+      const remainingConnections = prev.connections.filter((c) => c.id !== targetId);
+      const { appliedNodeId, groundedNodeIds } = deriveVoltageNodesFromConnections(remainingConnections);
+      return {
+        ...prev,
+        connections: remainingConnections,
+        voltageConfig: {
+          ...prev.voltageConfig,
+          appliedNodeId,
+          groundedNodeIds,
+        },
+      };
+    });
+
+    setSelectedConnectionId(null);
+    setNotice('Conexão removida.');
   }
 
   function selectNode(node) {
     if (!node.isOutput) return;
+    setSelectedConnectionId(null);
 
     if (!selectedNode) {
       setSelectedNode(node);
-      setNotice(`Ponto ${node.polarity || ''}${globalNumbers.get(node.id)} selecionado. Escolha outro ponto de saída.`);
+      const gNum = globalNumbers.get(node.id) ?? node.number;
+      const nodeName = node.polarity ? `${node.polarity}${gNum}` : (node.label || node.id);
+      setNotice(`Ponto ${nodeName} selecionado. Escolha outro ponto para conectar.`);
       return;
     }
 
@@ -398,10 +755,26 @@ export default function App() {
       return;
     }
 
-    const fromSub = subRegions.find((sub) => sub.id === selectedNode.subRegionId);
-    const toSub = subRegions.find((sub) => sub.id === node.subRegionId);
+    const isSpecialId = (id) =>
+      id === 'voltage-source' || (typeof id === 'string' && id.startsWith('earth'));
+
+    const fromIsSpecial = isSpecialId(selectedNode.subRegionId);
+    const toIsSpecial = isSpecialId(node.subRegionId);
+
+    const fromSub = fromIsSpecial
+      ? { id: selectedNode.subRegionId }
+      : subRegions.find((sub) => sub.id === selectedNode.subRegionId);
+    const toSub = toIsSpecial
+      ? { id: node.subRegionId }
+      : subRegions.find((sub) => sub.id === node.subRegionId);
 
     if (!fromSub || !toSub) return;
+
+    // Conexão entre o mesmo bloco especial não é permitida
+    if (fromIsSpecial && toIsSpecial && selectedNode.subRegionId === node.subRegionId) {
+      setSelectedNode(null);
+      return;
+    }
 
     const alreadyConnected = connections.some((connection) => {
       return (
@@ -426,18 +799,46 @@ export default function App() {
       toNumber: node.number,
     };
 
-    setState((prev) => ({ ...prev, connections: [...prev.connections, connection] }));
+    const newConnections = [...connections, connection];
+    const { appliedNodeId, groundedNodeIds } = deriveVoltageNodesFromConnections(newConnections);
+
+    setState((prev) => ({
+      ...prev,
+      connections: newConnections,
+      voltageConfig: {
+        ...prev.voltageConfig,
+        appliedNodeId: appliedNodeId ?? prev.voltageConfig.appliedNodeId,
+        groundedNodeIds: groundedNodeIds.length > 0 ? groundedNodeIds : prev.voltageConfig.groundedNodeIds,
+      },
+    }));
     setSelectedNode(null);
-    setNotice('Conexão criada.');
+
+    if (fromIsSpecial || toIsSpecial) {
+      if (selectedNode.subRegionId === 'voltage-source' || node.subRegionId === 'voltage-source') {
+        setNotice('Tensão conectada ao ponto com sucesso.');
+      } else {
+        setNotice('Ponto aterrado (referência 0 kV) com sucesso.');
+      }
+    } else {
+      setNotice('Conexão criada.');
+    }
   }
 
   function deleteConnectionsForSelectedNode() {
     if (!selectedNode) return;
+    const remainingConnections = connections.filter(
+      (c) => c.from !== selectedNode.id && c.to !== selectedNode.id
+    );
+    const { appliedNodeId, groundedNodeIds } = deriveVoltageNodesFromConnections(remainingConnections);
+
     setState((prev) => ({
       ...prev,
-      connections: prev.connections.filter(
-        (c) => c.from !== selectedNode.id && c.to !== selectedNode.id
-      ),
+      connections: remainingConnections,
+      voltageConfig: {
+        ...prev.voltageConfig,
+        appliedNodeId,
+        groundedNodeIds,
+      },
     }));
     setSelectedNode(null);
     setNotice('Conexões do ponto removidas.');
@@ -484,6 +885,10 @@ export default function App() {
       exportedAt: new Date().toISOString(),
       subRegions,
       connections,
+      voltageConfig: {
+        ...voltageConfig,
+        groundedNodeIds: groundedSubNodeIds,
+      },
     };
 
     const jsonString = JSON.stringify(projectData, null, 2);
@@ -505,15 +910,28 @@ export default function App() {
         const content = e.target.result;
         const data = JSON.parse(content);
 
-        // Suporta tanto formato completo { subRegions, connections } quanto array direto
         let newSubs = [];
         let newConns = [];
+        let newVoltageConfig = {
+          appliedNodeId: null,
+          voltageValue: '13.8',
+          groundedNodeIds: [],
+          source: { id: 'voltage-source', x: 80, y: 360, enabled: true },
+          earths: [{ id: 'earth-1', x: 80, y: 490 }],
+        };
 
         if (Array.isArray(data.subRegions)) {
           newSubs = data.subRegions;
           newConns = Array.isArray(data.connections) ? data.connections : [];
+          if (data.voltageConfig) {
+            newVoltageConfig = {
+              ...newVoltageConfig,
+              ...data.voltageConfig,
+              source: data.voltageConfig.source || newVoltageConfig.source,
+              earths: Array.isArray(data.voltageConfig.earths) ? data.voltageConfig.earths : newVoltageConfig.earths,
+            };
+          }
         } else if (Array.isArray(data)) {
-          // Caso alguém salve diretamente a lista de sub-regiões
           newSubs = data;
         } else {
           throw new Error('Formato JSON inválido: subRegions não encontrado.');
@@ -522,11 +940,12 @@ export default function App() {
         setState({
           subRegions: newSubs,
           connections: newConns,
+          voltageConfig: newVoltageConfig,
         });
 
         setSelectedNode(null);
         setSelectedSubRegionId(null);
-        setNotice(`Projeto importado com sucesso: ${newSubs.length} sub-regiões e ${newConns.length} conexões.`);
+        setNotice(`Projeto importado com sucesso: ${newSubs.length} sub-regiões, ${newConns.length} conexões.`);
       } catch (err) {
         console.error(err);
         setNotice(`Erro ao importar arquivo JSON: ${err.message || 'Arquivo corrompido ou formato incompatível.'}`);
@@ -535,23 +954,49 @@ export default function App() {
     reader.readAsText(file);
   }
 
+  function saveVoltageConfig({ appliedNodeId, voltageValue, groundedNodeIds }) {
+    setState((prev) => ({
+      ...prev,
+      voltageConfig: {
+        ...prev.voltageConfig,
+        appliedNodeId,
+        voltageValue,
+        groundedNodeIds,
+      },
+    }));
+    commit();
+    setNotice('Configuração de tensão salva com sucesso.');
+  }
+
   return (
     <div className="app-shell">
       <Toolbar
         onAddSubRegion={addSubRegion}
         onOpenMultiHeliceModal={() => setShowMultiHeliceModal(true)}
         onOpenBatchModal={() => setShowBatchModal(true)}
+        onAddVoltageSource={addVoltageSource}
+        onAddEarth={addEarth}
         onDeleteConnection={deleteConnectionsForSelectedNode}
-        onClearSelection={() => { setSelectedNode(null); setNotice(null); }}
+        onDeleteSingleConnection={deleteSingleConnection}
+        onClearSelection={() => {
+          setSelectedNode(null);
+          setSelectedConnectionId(null);
+          setSelectedSubRegionId(null);
+          setNotice(null);
+        }}
         onSaveJson={saveProjectJson}
         onImportJson={importProjectJson}
         connectionMode={Boolean(selectedNode)}
         selectedNode={selectedNode}
-        onOpenTable={() => setShowTable(true)}
+        selectedConnectionId={selectedConnectionId}
+        onOpenConnectionTable={() => setShowConnectionTable(true)}
+        onOpenVoltageTable={() => setShowVoltageTable(true)}
         onUndo={undo}
         onRedo={redo}
         canUndo={canUndo}
         canRedo={canRedo}
+        onToggleSidebar={() => setIsSidebarOpen((prev) => !prev)}
+        isSidebarOpen={isSidebarOpen}
       />
 
       <div className="app-main">
@@ -560,21 +1005,48 @@ export default function App() {
           connections={connections}
           selectedNode={selectedNode}
           selectedSubRegionId={selectedSubRegionId}
+          selectedConnectionId={selectedConnectionId}
           onSelectNode={selectNode}
+          onSelectConnection={selectConnection}
           onUpdatePosition={updatePosition}
           onCommitPosition={commitPosition}
-          onSelectSubRegion={setSelectedSubRegionId}
+          onSelectSubRegion={(id) => {
+            setSelectedSubRegionId(id);
+            if (id) {
+              setSelectedConnectionId(null);
+              setIsSidebarOpen(true);
+            }
+          }}
           onOpenDetail={setDetailSubRegionId}
           onOpenMultiHeliceDetail={setDetailMultiHeliceGroupId}
+          voltageConfig={voltageConfig}
+          onUpdateVoltageSourcePosition={updateVoltageSourcePosition}
+          onCommitVoltagePosition={commitVoltagePosition}
+          onUpdateVoltageValue={updateVoltageValue}
+          onDeleteVoltageSource={deleteVoltageSource}
+          onUpdateEarthPosition={updateEarthPosition}
+          onCommitEarthPosition={commitEarthPosition}
+          onDeleteEarth={deleteEarth}
+        />
+        <VoltageSourceModal
+          isOpen={showVoltageModal}
+          onClose={() => setShowVoltageModal(false)}
+          onSave={saveVoltageConfig}
+          nodes={allNodes}
         />
 
-        <PropertiesPanel
-          subRegion={selectedSubRegion}
-          onChange={updateSubRegion}
-          onClose={() => setSelectedSubRegionId(null)}
-          onDelete={() => deleteSubRegion(selectedSubRegionId)}
-          onOpenGroupDetail={setDetailMultiHeliceGroupId}
-        />
+        {/* Painel lateral com transição suave (ease 0.2s) */}
+        <div className={`properties-panel-wrapper ${!isSidebarOpen ? 'collapsed' : ''}`}>
+          <PropertiesPanel
+            subRegion={selectedSubRegion}
+            onChange={updateSubRegion}
+            onClose={() => setSelectedSubRegionId(null)}
+            onDelete={() => handleDeleteSelected(selectedSubRegionId)}
+            onOpenGroupDetail={setDetailMultiHeliceGroupId}
+            onUpdateVoltageValue={updateVoltageValue}
+            onRotate={rotateSelectedPin}
+          />
+        </div>
       </div>
 
       {notice && (
@@ -585,10 +1057,22 @@ export default function App() {
         </div>
       )}
 
-      {showTable && (
+      {showConnectionTable && (
         <ConnectionTable
           rows={rows}
-          onClose={() => setShowTable(false)}
+          onClose={() => setShowConnectionTable(false)}
+        />
+      )}
+
+      {showVoltageTable && (
+        <VoltageTable
+          config={{
+            ...voltageConfig,
+            groundedNodeIds: groundedSubNodeIds,
+          }}
+          globalNumbers={globalNumbers}
+          nodes={allNodes}
+          onClose={() => setShowVoltageTable(false)}
         />
       )}
 
