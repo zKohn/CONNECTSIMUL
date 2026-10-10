@@ -29,9 +29,13 @@ export default function Workspace({
   onCommitEarthPosition,
   onDeleteEarth,
   onShowAllNodes,
+  globalNumbers: propGlobalNumbers,
 }) {
   const workspaceRef = React.useRef(null);
-  const globalNumbers = useMemo(() => buildGlobalNumberMap(subRegions), [subRegions]);
+  const globalNumbers = useMemo(
+    () => propGlobalNumbers || buildGlobalNumberMap(subRegions),
+    [propGlobalNumbers, subRegions]
+  );
 
   const allSubNodes = useMemo(() => subRegions.flatMap((s) => buildSubRegionNodes(s)), [subRegions]);
   const nodeMap = useMemo(() => new Map(allSubNodes.map((n) => [n.id, n])), [allSubNodes]);

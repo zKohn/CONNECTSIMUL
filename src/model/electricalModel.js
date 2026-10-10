@@ -206,3 +206,29 @@ export function nodeDisplayNumber(nodeId, subRegions) {
   }
   return null;
 }
+
+export function getMultiHeliceExternalNodes(subs, connections = []) {
+  if (!subs || subs.length === 0) return [];
+  if (subs.length === 1) {
+    const nodes = buildSubRegionNodes(subs[0]);
+    return [...nodes].sort((a, b) => a.position - b.position);
+  }
+
+  const firstSub = subs[0];
+  const lastSub = subs[subs.length - 1];
+
+  const firstNodes = buildSubRegionNodes(firstSub);
+  const lastNodes = buildSubRegionNodes(lastSub);
+
+  // Na cadeia de hélices:
+  // A ligação interna é sempre do nó inferior para o nó superior subsequente.
+  // Logo:
+  // - Na 1ª hélice, o nó debaixo é conectado internamente; o terminal externo livre é o de CIMA.
+  // - Na última hélice, o nó de cima é conectado internamente; o terminal externo livre é o de BAIXO.
+  const firstExternal = firstNodes[firstNodes.length - 1];
+  const lastExternal = lastNodes[0];
+
+  const externalNodes = [lastExternal, firstExternal];
+  externalNodes.sort((a, b) => a.position - b.position);
+  return externalNodes;
+}

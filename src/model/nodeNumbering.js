@@ -11,7 +11,9 @@ function centerOf(subRegion) {
   Ordem de numeração:
   A numeração dos pontos é GLOBAL. Ou seja, cada nó ou rama é único(a)  
   1) As sub-regiões são ordenadas da esquerda para a direita;
-  2) Dentro de cada sub-região, os nós são numerados de baixo para cima.
+  2) Dentro de cada sub-região:
+     - 'bottom-to-top' (padrão): os nós são numerados de baixo para cima;
+     - 'top-to-bottom': os nós são numerados de cima para baixo.
   O número exibido de cada ponto deve ser reconstruído quando a estrutura muda.
 */
 export function sortSubRegions(subRegions) {
@@ -67,21 +69,26 @@ export function sortSubRegions(subRegions) {
   return result;
 }
 
-export function buildGlobalNodeOrder(subRegions) {
+export function buildGlobalNodeOrder(subRegions, numberingDirection = 'bottom-to-top') {
   const orderedSubs = sortSubRegions(subRegions);
   const result = [];
 
   for (const sub of orderedSubs) {
-    const nodes = buildSubRegionNodes(sub).sort((a, b) => a.number - b.number);
+    const nodes = buildSubRegionNodes(sub);
+    if (numberingDirection === 'top-to-bottom') {
+      nodes.reverse();
+    } else {
+      nodes.sort((a, b) => a.number - b.number);
+    }
     result.push(...nodes);
   }
 
   return result;
 }
 
-export function buildGlobalNumberMap(subRegions) {
+export function buildGlobalNumberMap(subRegions, numberingDirection = 'bottom-to-top') {
   const map = new Map();
-  buildGlobalNodeOrder(subRegions).forEach((node, index) => {
+  buildGlobalNodeOrder(subRegions, numberingDirection).forEach((node, index) => {
     map.set(node.id, index + 1);
   });
   return map;

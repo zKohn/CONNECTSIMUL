@@ -3,6 +3,7 @@ import { getSubRegionPortPoint } from './SubRegion';
 import { getMultiHelicePortPoint, getMultiHeliceExternalNodes } from './MultiHeliceGroup';
 import { getVoltageSourcePortPoint } from './VoltageSourceBlock';
 import { getEarthPortPoint } from './EarthBlock';
+import { buildEquipotentialNetMap } from '../model/equipotentialColors';
 
 export default function ConnectionLayer({
   subRegions,
@@ -39,7 +40,7 @@ export default function ConnectionLayer({
     if (!sub) return null;
     return sub.groupId
       ? getMultiHelicePortPoint(groupSubsMap.get(sub.groupId), nodeNumber, connections, nodeId)
-      : getSubRegionPortPoint(sub, nodeNumber, connections);
+      : getSubRegionPortPoint(sub, nodeNumber, connections, nodeId);
   };
 
   const getEdgeOffset = (subRegionId) => {
@@ -58,6 +59,10 @@ export default function ConnectionLayer({
     if (isVoltage(fromSubRegionId) || isVoltage(toSubRegionId)) return 'voltage';
     return 'node';
   };
+
+  const netColorMap = useMemo(() => {
+    return buildEquipotentialNetMap(connections);
+  }, [connections]);
 
   const computedConnections = useMemo(() => {
     const list = [];
@@ -96,6 +101,15 @@ export default function ConnectionLayer({
       const pathClass = type === 'earth' ? 'connection-path--earth' : type === 'voltage' ? 'connection-path--voltage' : 'connection-path';
       const glowClass = type === 'earth' ? 'connection-path-glow--earth' : type === 'voltage' ? 'connection-path-glow--voltage' : 'connection-path-glow';
       const endpointClass = type === 'earth' ? 'connection-endpoint--earth' : type === 'voltage' ? 'connection-endpoint--voltage' : 'connection-endpoint';
+
+      const netInfo = type === 'node' ? netColorMap.get(connection.id) : null;
+      const groupStyle = netInfo
+        ? {
+            '--conn-color': netInfo.stroke,
+            '--conn-glow': netInfo.glow,
+            '--conn-glow-selected': netInfo.glowSelected,
+          }
+        : undefined;
 
       const isSameSub = connection.fromSubRegionId === connection.toSubRegionId || isSameGroup;
 
@@ -179,22 +193,68 @@ export default function ConnectionLayer({
       const leadPathA = `M ${borderAX} ${borderAY} L ${finalPA.x} ${finalPA.y}`;
       const leadPathB = `M ${borderBX} ${borderBY} L ${finalPB.x} ${finalPB.y}`;
 
+      // Ponto médio exato da curva cúbica de Bézier (t = 0.5)
+      const midX = 0.125 * borderAX + 0.375 * c1x + 0.375 * c2x + 0.125 * borderBX;
+      const midY = 0.125 * borderAY + 0.375 * c1y + 0.375 * c2y + 0.125 * borderBY;
+
+      let badgeLabel = '';
+      let badgeWidth = 28;
+      let badgeBgColor = '#090e14';
+      let badgeBorderColor = 'var(--cyan)';
+      let badgeTextColor = '#ffffff';
+      let badgeRectClass = '';
+      let badgeTextClass = '';
+
+      if (type === 'earth') {
+        badgeLabel = '⏚';
+        badgeWidth = 24;
+        badgeBgColor = 'var(--green)';
+        badgeBorderColor = 'rgba(0, 0, 0, 0.4)';
+        badgeTextColor = '#05140b';
+        badgeRectClass = 'connection-badge-rect--earth';
+        badgeTextClass = 'connection-badge-text--earth';
+      } else if (type === 'voltage') {
+        badgeLabel = '⚡';
+        badgeWidth = 24;
+        badgeBgColor = 'var(--amber)';
+        badgeBorderColor = 'rgba(0, 0, 0, 0.4)';
+        badgeTextColor = '#1a1100';
+        badgeRectClass = 'connection-badge-rect--voltage';
+        badgeTextClass = 'connection-badge-text--voltage';
+      } else if (netInfo) {
+        badgeLabel = `#${netInfo.netIndex + 1}`;
+        badgeWidth = badgeLabel.length >= 4 ? 44 : badgeLabel.length >= 3 ? 36 : 28;
+        badgeBgColor = netInfo.stroke;
+        badgeTextColor = netInfo.textColor;
+        badgeBorderColor = netInfo.isLightColor ? 'rgba(0, 0, 0, 0.35)' : 'rgba(255, 255, 255, 0.35)';
+      }
+
       list.push({
         id: connection.id,
         isSelected,
         pathClass,
         glowClass,
         endpointClass,
+        groupStyle,
         finalPA,
         finalPB,
         curvePath,
         leadPathA,
         leadPathB,
+        midX,
+        midY,
+        badgeLabel,
+        badgeWidth,
+        badgeBgColor,
+        badgeBorderColor,
+        badgeTextColor,
+        badgeRectClass,
+        badgeTextClass,
       });
     }
 
     return list;
-  }, [connections, subMap, earthMap, groupSubsMap, selectedConnectionId, voltageSource]);
+  }, [connections, subMap, earthMap, groupSubsMap, selectedConnectionId, voltageSource, netColorMap]);
 
   const svgStyle = width && height ? { width, height, minWidth: width } : undefined;
 
@@ -212,6 +272,7 @@ export default function ConnectionLayer({
           <g
             key={`curve-${item.id}`}
             className={`connection-group ${item.isSelected ? 'connection-group--selected' : ''}`}
+            style={item.groupStyle}
             onClick={(e) => {
               e.stopPropagation();
               onSelectConnection?.(item.id);
@@ -224,6 +285,11 @@ export default function ConnectionLayer({
             <path
               d={item.curvePath}
               className="connection-hitarea"
+            />
+            {/* Casing escuro subjacente para separar visualmente conexões que se cruzam */}
+            <path
+              d={item.curvePath}
+              className="connection-casing"
             />
             <path
               d={item.curvePath}
@@ -250,6 +316,7 @@ export default function ConnectionLayer({
           <g
             key={`leads-${item.id}`}
             className={`connection-group ${item.isSelected ? 'connection-group--selected' : ''}`}
+            style={item.groupStyle}
             onClick={(e) => {
               e.stopPropagation();
               onSelectConnection?.(item.id);
@@ -262,6 +329,10 @@ export default function ConnectionLayer({
             <path
               d={item.leadPathA}
               className="connection-hitarea"
+            />
+            <path
+              d={item.leadPathA}
+              className="connection-casing"
             />
             <path
               d={item.leadPathA}
@@ -279,6 +350,10 @@ export default function ConnectionLayer({
             />
             <path
               d={item.leadPathB}
+              className="connection-casing"
+            />
+            <path
+              d={item.leadPathB}
               className={`${item.glowClass} ${item.isSelected ? 'connection-path-glow--selected' : ''}`}
               filter="url(#connectionGlowFront)"
             />
@@ -289,6 +364,43 @@ export default function ConnectionLayer({
             {/* Círculos nos pontos de conexão */}
             <circle cx={item.finalPA.x} cy={item.finalPA.y} r={item.isSelected ? 6 : 5} className={`${item.endpointClass} ${item.isSelected ? 'connection-endpoint--selected' : ''}`} />
             <circle cx={item.finalPB.x} cy={item.finalPB.y} r={item.isSelected ? 6 : 5} className={`${item.endpointClass} ${item.isSelected ? 'connection-endpoint--selected' : ''}`} />
+
+            {/* Tag / Badge de Identificação da Rede no ponto médio da curva (sempre ativa) */}
+            {Boolean(item.badgeLabel) && (
+              <g
+                className="connection-badge-group"
+                transform={`translate(${item.midX}, ${item.midY})`}
+              >
+                <g className="connection-badge-inner">
+                  <rect
+                    x={-item.badgeWidth / 2}
+                    y={-11}
+                    width={item.badgeWidth}
+                    height={22}
+                    rx={5.5}
+                    className={`connection-badge-rect ${item.badgeRectClass} ${item.isSelected ? 'connection-badge-rect--selected' : ''}`}
+                    style={
+                      item.isSelected
+                        ? undefined
+                        : { fill: item.badgeBgColor, stroke: item.badgeBorderColor }
+                    }
+                  />
+                  <text
+                    x={0}
+                    y={4.5}
+                    textAnchor="middle"
+                    className={`connection-badge-text ${item.badgeTextClass} ${item.isSelected ? 'connection-badge-text--selected' : ''}`}
+                    style={
+                      item.isSelected
+                        ? undefined
+                        : { fill: item.badgeTextColor }
+                    }
+                  >
+                    {item.badgeLabel}
+                  </text>
+                </g>
+              </g>
+            )}
           </g>
         ))}
       </svg>

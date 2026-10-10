@@ -202,6 +202,13 @@ button:focus-visible {
   color: var(--cyan);
 }
 
+.btn-numbering-active {
+  border-color: rgba(69, 214, 255, 0.45);
+  background: rgba(69, 214, 255, 0.12);
+  color: var(--cyan);
+  box-shadow: 0 0 12px rgba(69, 214, 255, 0.16);
+}
+
 .toolbar-divider {
   width: 1px;
   height: 24px;
@@ -228,10 +235,12 @@ button:focus-visible {
 }
 
 .connection-status {
-  min-width: 220px;
-  text-align: right;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
   color: #7f8b97;
   font-size: 11px;
+  white-space: nowrap;
 }
 
 .connection-status.active {
@@ -339,11 +348,13 @@ button:focus-visible {
 }
 
 .connection-layer--back {
-  z-index: 1; /* Camada visual atrás de qualquer estrutura não conectada (sub-regiões z-index: 4, fontes/terras z-index: 10) */
+  z-index: 1;
+  /* Camada visual atrás de qualquer estrutura não conectada (sub-regiões z-index: 4, fontes/terras z-index: 10) */
 }
 
 .connection-layer--front {
-  z-index: 6; /* Camada visual nos terminais: passa exclusivamente pela parte da sub-região que leva ao ponto de conexão */
+  z-index: 6;
+  /* Camada visual nos terminais: passa exclusivamente pela parte da sub-região que leva ao ponto de conexão */
 }
 
 .connection-group {
@@ -358,31 +369,32 @@ button:focus-visible {
   pointer-events: stroke;
 }
 
-/* Conexão nó → nó (padrão, cyan) */
+/* Conexão nó → nó (rede equipotencial dinâmica, fallback cyan) */
 .connection-path {
   fill: none;
-  stroke: var(--cyan);
+  stroke: var(--conn-color, var(--cyan));
   stroke-width: 2.4;
   stroke-linecap: round;
-  opacity: .86;
+  opacity: .88;
   pointer-events: stroke;
   cursor: pointer;
   transition: stroke-width .15s ease, filter .15s ease, opacity .15s ease;
 }
+
 .connection-path-glow {
   fill: none;
-  stroke: var(--cyan);
+  stroke: var(--conn-color, var(--cyan));
   stroke-width: 7;
   stroke-linecap: round;
-  opacity: .12;
+  opacity: .14;
   pointer-events: none;
   transition: stroke-width .15s ease, opacity .15s ease;
 }
 
-/* Conexão nó → terra (green) */
+/* Conexão nó → terra (imutável, green) */
 .connection-path--earth {
   fill: none;
-  stroke: var(--green);
+  stroke: var(--green) !important;
   stroke-width: 2.4;
   stroke-linecap: round;
   opacity: .86;
@@ -390,9 +402,10 @@ button:focus-visible {
   cursor: pointer;
   transition: stroke-width .15s ease, filter .15s ease, opacity .15s ease;
 }
+
 .connection-path-glow--earth {
   fill: none;
-  stroke: var(--green);
+  stroke: var(--green) !important;
   stroke-width: 7;
   stroke-linecap: round;
   opacity: .15;
@@ -400,10 +413,10 @@ button:focus-visible {
   transition: stroke-width .15s ease, opacity .15s ease;
 }
 
-/* Conexão nó → fonte de tensão (amber) */
+/* Conexão nó → fonte de tensão (imutável, amber) */
 .connection-path--voltage {
   fill: none;
-  stroke: var(--amber);
+  stroke: var(--amber) !important;
   stroke-width: 2.4;
   stroke-linecap: round;
   opacity: .86;
@@ -411,9 +424,10 @@ button:focus-visible {
   cursor: pointer;
   transition: stroke-width .15s ease, filter .15s ease, opacity .15s ease;
 }
+
 .connection-path-glow--voltage {
   fill: none;
-  stroke: var(--amber);
+  stroke: var(--amber) !important;
   stroke-width: 7;
   stroke-linecap: round;
   opacity: .15;
@@ -423,24 +437,36 @@ button:focus-visible {
 
 .connection-endpoint {
   fill: #0b1117;
-  stroke: var(--cyan);
+  stroke: var(--conn-color, var(--cyan));
   stroke-width: 2;
   pointer-events: none;
   transition: stroke .15s ease, fill .15s ease, r .15s ease;
 }
+
 .connection-endpoint--earth {
   fill: #0b1117;
-  stroke: var(--green);
+  stroke: var(--green) !important;
   stroke-width: 2;
   pointer-events: none;
   transition: stroke .15s ease, fill .15s ease, r .15s ease;
 }
+
 .connection-endpoint--voltage {
   fill: #0b1117;
-  stroke: var(--amber);
+  stroke: var(--amber) !important;
   stroke-width: 2;
   pointer-events: none;
   transition: stroke .15s ease, fill .15s ease, r .15s ease;
+}
+
+/* Casing escuro subjacente para separar visualmente conexões que se cruzam */
+.connection-casing {
+  fill: none;
+  stroke: #090c10;
+  stroke-width: 5.6;
+  stroke-linecap: round;
+  pointer-events: none;
+  opacity: 0.95;
 }
 
 /* Hover na conexão */
@@ -449,6 +475,7 @@ button:focus-visible {
   filter: brightness(1.25);
   opacity: 1;
 }
+
 .connection-group:hover .connection-path-glow {
   opacity: .35;
   stroke-width: 10;
@@ -465,7 +492,7 @@ button:focus-visible {
 }
 
 .connection-group--selected .connection-path-glow {
-  stroke: var(--cyan) !important;
+  stroke: var(--conn-color, var(--cyan)) !important;
   stroke-width: 14 !important;
   opacity: 0.55 !important;
 }
@@ -484,7 +511,7 @@ button:focus-visible {
 
 .connection-group--selected .connection-endpoint {
   stroke: #ffffff !important;
-  fill: var(--cyan) !important;
+  fill: var(--conn-color, var(--cyan)) !important;
 }
 
 .connection-group--selected .connection-endpoint--earth {
@@ -495,6 +522,66 @@ button:focus-visible {
 .connection-group--selected .connection-endpoint--voltage {
   stroke: #ffffff !important;
   fill: var(--amber) !important;
+}
+
+/* Badge / Tag de identificação da rede na conexão */
+.connection-badge-group {
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.connection-badge-inner {
+  transition: transform 0.15s ease;
+  transform-origin: 0 0;
+}
+
+.connection-badge-rect {
+  stroke-width: 1.1;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.85));
+  transition: transform .12s ease, fill .15s ease, stroke .15s ease, filter .15s ease;
+}
+
+.connection-badge-text {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11.5px;
+  font-weight: 800;
+  letter-spacing: -0.2px;
+  pointer-events: none;
+  user-select: none;
+  transition: fill .15s ease;
+}
+
+.connection-badge-text--earth {
+  font-size: 13.5px;
+  font-weight: 900;
+}
+
+.connection-badge-text--voltage {
+  font-size: 12.5px;
+  font-weight: 900;
+}
+
+/* Hover no grupo da conexão destaca a badge */
+.connection-group:hover .connection-badge-inner {
+  transform: scale(1.18);
+}
+
+.connection-group:hover .connection-badge-rect {
+  stroke-width: 1.5;
+  filter: drop-shadow(0 0 8px var(--conn-color, var(--cyan)));
+}
+
+/* Conexão selecionada */
+.connection-group--selected .connection-badge-rect {
+  fill: #ffffff !important;
+  stroke: #ffffff !important;
+  stroke-width: 1.8 !important;
+  filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.95)) !important;
+}
+
+.connection-group--selected .connection-badge-text {
+  fill: #080d14 !important;
+  font-weight: 900 !important;
 }
 
 @keyframes connectionDash {
@@ -1716,7 +1803,7 @@ td {
   flex-shrink: 0;
 }
 
-/* Botão sanduíche fixo no topo direito para recolher/expandir detalhes */
+/* Botão sanduíche no topo direito para recolher/expandir detalhes */
 .sidebar-toggle-btn {
   position: static;
   width: 36px;
@@ -1809,6 +1896,7 @@ input[type=number],
     flex-direction: column;
     align-items: stretch;
   }
+
   .tables-wrapper .table-modal {
     width: 100%;
   }

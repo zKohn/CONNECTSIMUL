@@ -26,6 +26,7 @@ import { useHistory } from './hooks/useHistory';
 
 function makeInitialState() {
   return {
+    nodeNumberingDirection: 'bottom-to-top',
     subRegions: [
       createSubRegion({
         id: 'sub-1',
@@ -79,6 +80,7 @@ export default function App() {
   } = useHistory(makeInitialState());
 
   const { subRegions, connections, voltageConfig } = state;
+  const nodeNumberingDirection = state.nodeNumberingDirection || 'bottom-to-top';
 
   const [selectedSubRegionId, setSelectedSubRegionId] = useState(null);
   const [selectedConnectionId, setSelectedConnectionId] = useState(null);
@@ -94,8 +96,8 @@ export default function App() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   const globalNumbers = useMemo(
-    () => buildGlobalNumberMap(subRegions),
-    [subRegions]
+    () => buildGlobalNumberMap(subRegions, nodeNumberingDirection),
+    [subRegions, nodeNumberingDirection]
   );
 
   const globalBranches = useMemo(
@@ -104,13 +106,13 @@ export default function App() {
   );
 
   const { groundedSubNodeIds } = useMemo(
-    () => getElectricalGroups(subRegions, connections),
-    [subRegions, connections]
+    () => getElectricalGroups(subRegions, connections, nodeNumberingDirection),
+    [subRegions, connections, nodeNumberingDirection]
   );
 
   const rows = useMemo(
-    () => buildTableRows(subRegions, connections),
-    [subRegions, connections]
+    () => buildTableRows(subRegions, connections, nodeNumberingDirection),
+    [subRegions, connections, nodeNumberingDirection]
   );
 
   const allNodes = useMemo(() => subRegions.flatMap((s) => buildSubRegionNodes(s)), [subRegions]);
@@ -1148,11 +1150,26 @@ export default function App() {
     return subRegions.filter((s) => s.groupId === detailMultiHeliceGroupId);
   }, [subRegions, detailMultiHeliceGroupId]);
 
+    function toggleNodeNumberingDirection() {
+    const nextDirection =
+      nodeNumberingDirection === 'top-to-bottom' ? 'bottom-to-top' : 'top-to-bottom';
+    setState({
+      ...state,
+      nodeNumberingDirection: nextDirection,
+    });
+    setNotice(
+      nextDirection === 'top-to-bottom'
+        ? 'Numeração alterada: nós ordenados de cima para baixo.'
+        : 'Numeração alterada: nós ordenados de baixo para cima.'
+    );
+  }
+
   function saveProjectJson() {
     const projectData = {
       app: 'CONNECTSIMUL',
       version: '1.0',
       exportedAt: new Date().toISOString(),
+      nodeNumberingDirection,
       subRegions,
       connections,
       voltageConfig: {
@@ -1211,6 +1228,7 @@ export default function App() {
           subRegions: newSubs,
           connections: newConns,
           voltageConfig: newVoltageConfig,
+          nodeNumberingDirection: data.nodeNumberingDirection || 'bottom-to-top',
         });
 
         setSelectedNode(null);
@@ -1267,12 +1285,15 @@ export default function App() {
         canRedo={canRedo}
         onToggleSidebar={() => setIsSidebarOpen((prev) => !prev)}
         isSidebarOpen={isSidebarOpen}
+        nodeNumberingDirection={nodeNumberingDirection}
+        onToggleNodeNumberingDirection={toggleNodeNumberingDirection}
       />
 
       <div className="app-main">
         <Workspace
           subRegions={subRegions}
           connections={connections}
+          globalNumbers={globalNumbers}
           selectedNode={selectedNode}
           selectedSubRegionId={selectedSubRegionId}
           selectedConnectionId={selectedConnectionId}

@@ -40,10 +40,12 @@ export function getSubRegionHeight(subRegion, connections = []) {
   return HEADER_HEIGHT + bodyHeight + FOOTER_HEIGHT;
 }
 
-export function getSubRegionNodeY(subRegion, nodeNumber, connections = []) {
+export function getSubRegionNodeY(subRegion, nodeNumber, connections = [], nodeId = null) {
   const visibleNodes = getVisibleNodes(subRegion, connections);
   const allNodes = buildSubRegionNodes(subRegion);
-  const targetNode = allNodes.find((node) => node.number === nodeNumber);
+  const targetNode = nodeId
+    ? allNodes.find((node) => node.id === nodeId)
+    : allNodes.find((node) => node.number === nodeNumber);
   if (!targetNode) return null;
 
   const visibleIndex = visibleNodes.findIndex((node) => node.id === targetNode.id);
@@ -56,8 +58,8 @@ export function getSubRegionNodeY(subRegion, nodeNumber, connections = []) {
   return HEADER_HEIGHT + (bottom - offsets[visibleIndex]);
 }
 
-export function getSubRegionPortPoint(subRegion, nodeNumber, connections = []) {
-  const y = getSubRegionNodeY(subRegion, nodeNumber, connections);
+export function getSubRegionPortPoint(subRegion, nodeNumber, connections = [], nodeId = null) {
+  const y = getSubRegionNodeY(subRegion, nodeNumber, connections, nodeId);
   if (y == null) return null;
   const scrollAdjustedY = subRegion.y + y;
   return {

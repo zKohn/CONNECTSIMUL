@@ -1,4 +1,5 @@
 import { buildGlobalNodeOrder, buildGlobalNumberMap } from './nodeNumbering';
+import { buildSubRegionNodes, getMultiHeliceExternalNodes } from './electricalModel';
 
 export function createUnionFind(items) {
   const parent = new Map();
@@ -60,8 +61,8 @@ export function createUnionFind(items) {
   return { find, union, groups };
 }
 
-export function getElectricalGroups(subRegions, externalConnections) {
-  const allNodes = buildGlobalNodeOrder(subRegions);
+export function getElectricalGroups(subRegions, externalConnections, numberingDirection = 'bottom-to-top') {
+  const allNodes = buildGlobalNodeOrder(subRegions, numberingDirection);
   const subNodeIdSet = new Set(allNodes.map((node) => node.id));
 
   const allIds = new Set(subNodeIdSet);
@@ -111,26 +112,86 @@ export function getElectricalGroups(subRegions, externalConnections) {
         const bi = allNodes.findIndex((n) => n.id === b);
         return ai - bi;
       })
-    )
-    .sort((a, b) => {
-      const ai = allNodes.findIndex((n) => n.id === a[0]);
-      const bi = allNodes.findIndex((n) => n.id === b[0]);
-      return ai - bi;
-    });
+    );
+
+  // Separação em duas categorias verticais:
+  // 1) Conexões fechadas (hélices múltiplas) - topo da tabela
+  // 2) Conexões desenhadas pelo usuário - parte inferior da tabela
+  const closedHeliceGroups = [];
+  const userDrawnGroups = [];
+
+  for (const group of sortedUngroundedGroups) {
+    if (isClosedMultiHeliceGroup(group, subRegions, externalConnections)) {
+      closedHeliceGroups.push(group);
+    } else {
+      userDrawnGroups.push(group);
+    }
+  }
+
+  const sortByFirstNode = (a, b) => {
+    const ai = allNodes.findIndex((n) => n.id === a[0]);
+    const bi = allNodes.findIndex((n) => n.id === b[0]);
+    return ai - bi;
+  };
+
+  closedHeliceGroups.sort(sortByFirstNode);
+  userDrawnGroups.sort(sortByFirstNode);
+
+  const finalOrderedGroups = [...closedHeliceGroups, ...userDrawnGroups];
 
   return {
     groundedSubNodeIds,
-    ungroundedConnectedGroups: sortedUngroundedGroups,
+    ungroundedConnectedGroups: finalOrderedGroups,
   };
 }
 
-export function buildConnectivity(subRegions, externalConnections) {
-  const { ungroundedConnectedGroups } = getElectricalGroups(subRegions, externalConnections);
+export function isClosedMultiHeliceGroup(group, subRegions, externalConnections) {
+  if (!group || group.length === 0) return false;
+
+  const subMap = new Map(subRegions.map((s) => [s.id, s]));
+  const allSubNodes = subRegions.flatMap((s) => buildSubRegionNodes(s));
+  const nodeSubMap = new Map(allSubNodes.map((n) => [n.id, subMap.get(n.subRegionId)]));
+
+  // Todos os nós deste grupo devem pertencer a sub-regiões do mesmo groupId
+  const firstSub = nodeSubMap.get(group[0]);
+  if (!firstSub || !firstSub.groupId) return false;
+  const targetGroupId = firstSub.groupId;
+
+  const allInSameGroup = group.every((nodeId) => {
+    const sub = nodeSubMap.get(nodeId);
+    return sub && sub.groupId === targetGroupId;
+  });
+  if (!allInSameGroup) return false;
+
+  // Encontra as conexões que unem os nós deste grupo
+  const groupNodeSet = new Set(group);
+  const connectionsInGroup = externalConnections.filter(
+    (c) => groupNodeSet.has(c.from) && groupNodeSet.has(c.to)
+  );
+
+  if (connectionsInGroup.length === 0) return false;
+
+  // Verifica se todas as conexões do grupo são conexões internas da cadeia da hélice múltipla
+  const groupSubs = subRegions.filter((s) => s.groupId === targetGroupId);
+  const extNodes = getMultiHeliceExternalNodes(groupSubs, externalConnections);
+  const extNodeIds = new Set(extNodes.map((n) => n.id));
+
+  return connectionsInGroup.every((c) => {
+    const fromSub = subMap.get(c.fromSubRegionId);
+    const toSub = subMap.get(c.toSubRegionId);
+    const isSameGroupSubs = fromSub && toSub && fromSub.groupId === targetGroupId && toSub.groupId === targetGroupId;
+    const isExternalLoop = extNodeIds.has(c.from) && extNodeIds.has(c.to);
+    return isSameGroupSubs && !isExternalLoop;
+  });
+}
+
+export function buildConnectivity(subRegions, externalConnections, numberingDirection = 'bottom-to-top') {
+  const { ungroundedConnectedGroups } = getElectricalGroups(subRegions, externalConnections, numberingDirection);
   return ungroundedConnectedGroups;
 }
 
-export function validateConnectivity(subRegions, externalConnections) {
-  const nodeIds = new Set(buildGlobalNodeOrder(subRegions).map((node) => node.id));
+export function validateConnectivity(subRegions, externalConnections, numberingDirection = 'bottom-to-top') {
+  const nodeIds = new Set(buildGlobalNodeOrder(subRegions, numberingDirection).map((node) => node.id));
   const seen = new Set();
   const errors = [];
 
@@ -161,9 +222,9 @@ export function validateConnectivity(subRegions, externalConnections) {
   return errors;
 }
 
-export function buildTableRows(subRegions, externalConnections) {
-  const globalNumberMap = buildGlobalNumberMap(subRegions);
-  const groups = buildConnectivity(subRegions, externalConnections);
+export function buildTableRows(subRegions, externalConnections, numberingDirection = 'bottom-to-top') {
+  const globalNumberMap = buildGlobalNumberMap(subRegions, numberingDirection);
+  const groups = buildConnectivity(subRegions, externalConnections, numberingDirection);
 
   return groups.map((group, index) => {
     const points = group

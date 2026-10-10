@@ -23,6 +23,8 @@ export default function Toolbar({
   canRedo,
   onToggleSidebar,
   isSidebarOpen,
+  nodeNumberingDirection = 'bottom-to-top',
+  onToggleNodeNumberingDirection,
 }) {
   const fileInputRef = React.useRef(null);
 
@@ -123,6 +125,20 @@ export default function Toolbar({
             style={{ borderColor: 'rgba(255, 200, 87, 0.4)', background: 'rgba(255, 200, 87, 0.08)', color: 'var(--amber)' }}
           >
             <span>📊</span> Tensão
+          </button>
+          <button
+            className={`btn ${nodeNumberingDirection === 'top-to-bottom' ? 'btn-numbering-active' : ''}`}
+            onClick={onToggleNodeNumberingDirection}
+            title={
+              nodeNumberingDirection === 'top-to-bottom'
+                ? 'Ordem atual: De cima para baixo (clique para alternar para de baixo para cima)'
+                : 'Ordem atual: De baixo para cima (clique para alternar para de cima para baixo)'
+            }
+          >
+            <span style={{ display: 'inline-flex', verticalAlign: '-1px', marginRight: '4px' }}>
+              {nodeNumberingDirection === 'top-to-bottom' ? '⬇️' : '⬆️'}
+            </span>
+            <span>Ordem Numeração</span>
           </button>
         </div>
 
