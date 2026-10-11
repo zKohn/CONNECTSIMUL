@@ -51,10 +51,10 @@ export default function Toolbar({
         <div className="toolbar-group" title="Criação de elementos do circuito">
           <span className="toolbar-group-label">Criar</span>
           <button className="btn btn-primary" onClick={onAddSubRegion} title="Adicionar uma sub-região padrão">
-            Sub-região
+            <span className="btn-multiline"><span>Sub-</span><span>região</span></span>
           </button>
           <button className="btn btn-accent" onClick={onOpenMultiHeliceModal} title="Adicionar sequência de sub-regiões de 1 rama e 2 nós">
-            Hélice Múltipla
+            <span className="btn-multiline"><span>Hélice</span><span>Múltipla</span></span>
           </button>
           <button
             className="btn"
@@ -62,14 +62,14 @@ export default function Toolbar({
             style={{ borderColor: 'rgba(69, 214, 255, 0.4)', background: 'rgba(69, 214, 255, 0.08)', color: 'var(--cyan)' }}
             title="Abrir tabela para geração rápida de várias subs em sequência"
           >
-            <span style={{ display: 'inline-flex', verticalAlign: '-2px', marginRight: '5px' }}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <span style={{ display: 'inline-flex', verticalAlign: '-2px', marginRight: '3px' }}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <polygon points="12 2 2 7 12 12 22 7 12 2" />
                 <polyline points="2 17 12 22 22 17" />
                 <polyline points="2 12 12 17 22 12" />
               </svg>
             </span>
-            Geração rápida
+            <span className="btn-multiline"><span>Geração</span><span>rápida</span></span>
           </button>
           <button
             className="btn"
@@ -77,7 +77,7 @@ export default function Toolbar({
             style={{ borderColor: 'rgba(255, 200, 87, 0.4)', background: 'rgba(255, 200, 87, 0.08)', color: 'var(--amber)' }}
             title="Adicionar / posicionar Bloco de Fonte de Tensão (kV)"
           >
-            <span>⚡</span> Fonte
+            <span className="btn-multiline"><span>⚡</span><span>Fonte</span></span>
           </button>
           <button
             className="btn"
@@ -85,7 +85,7 @@ export default function Toolbar({
             style={{ borderColor: 'rgba(89, 227, 145, 0.4)', background: 'rgba(89, 227, 145, 0.08)', color: 'var(--green)' }}
             title="Adicionar Bloco de Terra / Referência (0 kV)"
           >
-            <span>⏚</span> Terra
+            <span className="btn-multiline"><span>⏚</span><span>Terra</span></span>
           </button>
         </div>
 
@@ -93,7 +93,7 @@ export default function Toolbar({
 
         {/* Grupo: Conexões e Tabelas */}
         <div className="toolbar-group" title="Operações de conexão e tabelas">
-          <span className="toolbar-group-label">Conexões / Tabelas</span>
+          <span className="toolbar-group-label">Conexões</span>
           <button
             className="btn"
             onClick={onClearSelection}
@@ -114,10 +114,10 @@ export default function Toolbar({
             disabled={!selectedNode && !selectedConnectionId}
             title={selectedConnectionId ? 'Remover conexão selecionada (Delete)' : 'Remover conexões do ponto selecionado'}
           >
-            Desconectar
+            <span className="btn-multiline"><span>Desco-</span><span>nectar</span></span>
           </button>
           <button className="btn" onClick={onOpenConnectionTable} title="Ver mapa de potenciais e copiar conexões elétricas">
-            <span>📊</span> Conexões
+            <span className="btn-multiline"><span>📊</span><span>Conexões</span></span>
           </button>
           <button
             className="btn"
@@ -125,7 +125,7 @@ export default function Toolbar({
             title="Ver tabela de nós com aplicação de tensão e aterramentos"
             style={{ borderColor: 'rgba(255, 200, 87, 0.4)', background: 'rgba(255, 200, 87, 0.08)', color: 'var(--amber)' }}
           >
-            <span>📊</span> Tensão
+            <span className="btn-multiline"><span>📊</span><span>Tensão</span></span>
           </button>
           <button
             className="btn"
@@ -133,7 +133,7 @@ export default function Toolbar({
             title="Ver tabela de relações entre pares de pontos principais (N1 × N2)"
             style={{ borderColor: 'rgba(69, 214, 255, 0.4)', background: 'rgba(69, 214, 255, 0.08)', color: 'var(--cyan)' }}
           >
-            <span>📊</span> Pontos Principais
+            <span className="btn-multiline"><span>📊 Pontos</span><span>Principais</span></span>
           </button>
           <button
             className={`btn ${nodeNumberingDirection === 'top-to-bottom' ? 'btn-numbering-active' : ''}`}
@@ -144,10 +144,10 @@ export default function Toolbar({
                 : 'Ordem atual: De baixo para cima (clique para alternar para de cima para baixo)'
             }
           >
-            <span style={{ display: 'inline-flex', verticalAlign: '-1px', marginRight: '4px' }}>
-              {nodeNumberingDirection === 'top-to-bottom' ? '⬇️' : '⬆️'}
+            <span className="btn-multiline">
+              <span>{nodeNumberingDirection === 'top-to-bottom' ? '⬇️' : '⬆️'} Ordem</span>
+              <span>Numeração</span>
             </span>
-            <span>Ordem Numeração</span>
           </button>
         </div>
 
@@ -155,14 +155,14 @@ export default function Toolbar({
 
         {/* Grupo: Histórico */}
         <div className="toolbar-group" title="Histórico de ações">
-          <span className="toolbar-group-label">Histórico</span>
+          <span className="toolbar-group-label">Hist.</span>
           <button
             className="btn btn-ghost"
             onClick={onUndo}
             disabled={!canUndo}
             title="Desfazer (Ctrl+Z)"
           >
-            ↩ Desfazer
+            <span className="btn-multiline"><span>↩</span><span>Desfazer</span></span>
           </button>
           <button
             className="btn btn-ghost"
@@ -170,7 +170,7 @@ export default function Toolbar({
             disabled={!canRedo}
             title="Refazer (Ctrl+Y)"
           >
-            ↪ Refazer
+            <span className="btn-multiline"><span>↪</span><span>Refazer</span></span>
           </button>
         </div>
 
@@ -178,14 +178,14 @@ export default function Toolbar({
 
         {/* Grupo: Projeto */}
         <div className="toolbar-group" title="Arquivo do projeto (JSON)">
-          <span className="toolbar-group-label">Projeto</span>
+          <span className="toolbar-group-label">Proj.</span>
           <button
             className="btn"
             onClick={onSaveJson}
             title="Salvar projeto completo (sub-regiões e conexões) em arquivo JSON no computador"
             style={{ borderColor: 'rgba(89, 227, 145, 0.35)', color: 'var(--green)' }}
           >
-            <span>💾</span> Salvar
+            <span className="btn-multiline"><span>💾</span><span>Salvar</span></span>
           </button>
           <button
             className="btn"
@@ -193,7 +193,7 @@ export default function Toolbar({
             title="Importar arquivo JSON de conexões do computador para o software"
             style={{ borderColor: 'rgba(255, 200, 87, 0.35)', color: 'var(--amber)' }}
           >
-            <span>📂</span> Abrir
+            <span className="btn-multiline"><span>📂</span><span>Abrir</span></span>
           </button>
         </div>
 
