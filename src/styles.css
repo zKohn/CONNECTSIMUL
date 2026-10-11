@@ -92,12 +92,12 @@ button:focus-visible {
 }
 
 .topbar {
-  height: 68px;
-  flex: 0 0 68px;
+  height: 66px;
+  flex: 0 0 66px;
   display: flex;
   align-items: center;
-  gap: clamp(10px, 1vw, 18px);
-  padding: 0 clamp(12px, 1.2vw, 20px);
+  gap: 12px;
+  padding: 0 16px;
   background: rgba(9, 12, 16, .94);
   border-bottom: 1px solid var(--border);
   backdrop-filter: blur(18px);
@@ -111,38 +111,42 @@ button:focus-visible {
 .brand {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   flex-shrink: 0;
 }
 
 .brand-mark {
-  width: 38px;
-  height: 38px;
+  width: 36px;
+  height: 36px;
   display: grid;
   place-items: center;
   border: 1px solid rgba(69, 214, 255, .35);
-  border-radius: 11px;
+  border-radius: 10px;
   background: rgba(69, 214, 255, .08);
-  box-shadow: 0 0 24px rgba(69, 214, 255, .08);
+  box-shadow: 0 0 20px rgba(69, 214, 255, .08);
   color: var(--cyan);
-  font-size: 18px;
+  font-size: 17px;
   flex-shrink: 0;
 }
 
 .brand h1 {
   margin: 0;
-  font-size: 15px;
+  font-size: 14.5px;
   letter-spacing: -.01em;
   white-space: nowrap;
 }
 
 .brand span {
   color: var(--muted);
-  font-size: 11px;
+  font-size: 10.5px;
   white-space: nowrap;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
 }
 
-@media (max-width: 1300px) {
+@media (max-width: 1400px) {
   .brand span {
     display: none;
   }
@@ -150,12 +154,12 @@ button:focus-visible {
 
 .toolbar-actions {
   display: flex;
-  gap: clamp(5px, 0.7vw, 10px);
+  gap: 5px;
   align-items: center;
   flex: 1;
   min-width: 0;
-  overflow: visible;
-  padding: 0;
+  overflow: hidden;
+  padding: 2px 0;
 }
 
 .btn,
@@ -177,27 +181,27 @@ button:focus-visible {
 }
 
 .toolbar-actions .btn {
-  padding: 6px clamp(8px, 0.6vw, 12px);
-  font-size: clamp(11px, 0.75vw, 12px);
+  padding: 5px 8px;
+  font-size: 11px;
   font-weight: 600;
   line-height: 1.15;
-  border-radius: 8px;
+  border-radius: 7px;
   white-space: normal;
   text-align: center;
-  min-height: 38px;
+  min-height: 36px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 4px;
+  gap: 3px;
   flex-shrink: 0;
 }
 
 .btn-multiline {
   display: inline-flex;
   flex-direction: column;
-  line-height: 1.12;
+  line-height: 1.08;
   text-align: center;
-  font-size: clamp(10.5px, 0.7vw, 11.5px);
+  font-size: 10.5px;
 }
 
 .btn-multiline span {
@@ -255,21 +259,21 @@ button:focus-visible {
 
 .toolbar-divider {
   width: 1px;
-  height: 26px;
+  height: 24px;
   background: var(--border);
   flex-shrink: 0;
-  margin: 0 clamp(2px, 0.3vw, 5px);
+  margin: 0 3px;
 }
 
 .toolbar-group {
   display: inline-flex;
   align-items: center;
-  gap: clamp(4px, 0.5vw, 7px);
+  gap: 4px;
   position: relative;
 }
 
 .toolbar-group-label {
-  font-size: 9px;
+  font-size: 8.5px;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: #64748b;
@@ -281,7 +285,7 @@ button:focus-visible {
 .connection-status {
   display: inline-flex;
   align-items: center;
-  padding: 6px 14px;
+  padding: 6px 12px;
   border-radius: 18px;
   background: rgba(16, 21, 27, 0.85);
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -1958,22 +1962,23 @@ td {
 .topbar-right {
   display: flex;
   align-items: center;
-  gap: clamp(8px, 0.8vw, 12px);
+  gap: 10px;
   margin-left: auto;
   flex-shrink: 0;
+  padding-left: 12px;
 }
 
 /* Botão sanduíche no topo direito para recolher/expandir detalhes */
 .sidebar-toggle-btn {
   position: static;
-  width: 36px;
-  height: 36px;
+  width: 34px;
+  height: 34px;
   display: flex;
   align-items: center;
   justify-content: center;
   background: #10151b;
   border: 1px solid var(--border);
-  border-radius: 9px;
+  border-radius: 8px;
   color: #cbd5df;
   cursor: pointer;
   flex-shrink: 0;
