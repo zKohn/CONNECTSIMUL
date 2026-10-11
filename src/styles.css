@@ -92,8 +92,8 @@ button:focus-visible {
 }
 
 .topbar {
-  height: 66px;
-  flex: 0 0 66px;
+  height: 68px;
+  flex: 0 0 68px;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -136,18 +136,17 @@ button:focus-visible {
   white-space: nowrap;
 }
 
-.brand span {
+.brand-subtitle {
+  display: inline-flex;
+  flex-direction: column;
+  line-height: 1.15;
   color: var(--muted);
-  font-size: 10.5px;
+  font-size: 10px;
   white-space: nowrap;
-  max-width: 220px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  display: block;
 }
 
-@media (max-width: 1400px) {
-  .brand span {
+@media (max-width: 1100px) {
+  .brand-subtitle {
     display: none;
   }
 }
@@ -181,14 +180,14 @@ button:focus-visible {
 }
 
 .toolbar-actions .btn {
-  padding: 5px 8px;
-  font-size: 11px;
+  padding: 5px 6.5px;
+  font-size: 11.5px;
   font-weight: 600;
   line-height: 1.15;
   border-radius: 7px;
   white-space: normal;
   text-align: center;
-  min-height: 36px;
+  min-height: 38px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -273,7 +272,10 @@ button:focus-visible {
 }
 
 .toolbar-group-label {
-  font-size: 8.5px;
+  display: inline-flex;
+  flex-direction: column;
+  line-height: 1.05;
+  font-size: 8px;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: #64748b;

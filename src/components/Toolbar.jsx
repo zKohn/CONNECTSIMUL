@@ -42,7 +42,10 @@ export default function Toolbar({
         <div className="brand-mark">⚡</div>
         <div>
           <h1>CONNECTSIMUL</h1>
-          <span>Tornando as conexões entre "nós" muito mais fácil!</span>
+          <span className="brand-subtitle">
+            <span>Tornando a conexão entre nós</span>
+            <span>muito mais fácil!</span>
+          </span>
         </div>
       </div>
 
@@ -51,7 +54,7 @@ export default function Toolbar({
         <div className="toolbar-group" title="Criação de elementos do circuito">
           <span className="toolbar-group-label">Criar</span>
           <button className="btn btn-primary" onClick={onAddSubRegion} title="Adicionar uma sub-região padrão">
-            Sub-região
+            <span className="btn-multiline"><span>Sub-</span><span>regiões</span></span>
           </button>
           <button className="btn btn-accent" onClick={onOpenMultiHeliceModal} title="Adicionar sequência de sub-regiões de 1 rama e 2 nós">
             <span className="btn-multiline"><span>Hélice</span><span>Múltipla</span></span>
@@ -93,7 +96,10 @@ export default function Toolbar({
 
         {/* Grupo: Conexões e Tabelas */}
         <div className="toolbar-group" title="Operações de conexão e tabelas">
-          <span className="toolbar-group-label">Conexões</span>
+          <span className="toolbar-group-label">
+            <span>Conexões</span>
+            <span>/ Tabelas</span>
+          </span>
           <button
             className="btn"
             onClick={onClearSelection}
