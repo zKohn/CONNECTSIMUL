@@ -92,12 +92,12 @@ button:focus-visible {
 }
 
 .topbar {
-  height: 64px;
-  flex: 0 0 64px;
+  height: 68px;
+  flex: 0 0 68px;
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 0 12px;
+  gap: clamp(10px, 1vw, 18px);
+  padding: 0 clamp(12px, 1.2vw, 20px);
   background: rgba(9, 12, 16, .94);
   border-bottom: 1px solid var(--border);
   backdrop-filter: blur(18px);
@@ -111,38 +111,38 @@ button:focus-visible {
 .brand {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   flex-shrink: 0;
 }
 
 .brand-mark {
-  width: 34px;
-  height: 34px;
+  width: 38px;
+  height: 38px;
   display: grid;
   place-items: center;
   border: 1px solid rgba(69, 214, 255, .35);
-  border-radius: 10px;
+  border-radius: 11px;
   background: rgba(69, 214, 255, .08);
-  box-shadow: 0 0 20px rgba(69, 214, 255, .08);
+  box-shadow: 0 0 24px rgba(69, 214, 255, .08);
   color: var(--cyan);
-  font-size: 16px;
+  font-size: 18px;
   flex-shrink: 0;
 }
 
 .brand h1 {
   margin: 0;
-  font-size: 14px;
+  font-size: 15px;
   letter-spacing: -.01em;
   white-space: nowrap;
 }
 
 .brand span {
   color: var(--muted);
-  font-size: 10.5px;
+  font-size: 11px;
   white-space: nowrap;
 }
 
-@media (max-width: 1750px) {
+@media (max-width: 1300px) {
   .brand span {
     display: none;
   }
@@ -150,7 +150,7 @@ button:focus-visible {
 
 .toolbar-actions {
   display: flex;
-  gap: 4px;
+  gap: clamp(5px, 0.7vw, 10px);
   align-items: center;
   flex: 1;
   min-width: 0;
@@ -177,27 +177,27 @@ button:focus-visible {
 }
 
 .toolbar-actions .btn {
-  padding: 4px 6px;
-  font-size: 10.5px;
+  padding: 6px clamp(8px, 0.6vw, 12px);
+  font-size: clamp(11px, 0.75vw, 12px);
   font-weight: 600;
-  line-height: 1.12;
-  border-radius: 7px;
+  line-height: 1.15;
+  border-radius: 8px;
   white-space: normal;
   text-align: center;
-  min-height: 33px;
+  min-height: 38px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 3px;
+  gap: 4px;
   flex-shrink: 0;
 }
 
 .btn-multiline {
   display: inline-flex;
   flex-direction: column;
-  line-height: 1.05;
+  line-height: 1.12;
   text-align: center;
-  font-size: 10px;
+  font-size: clamp(10.5px, 0.7vw, 11.5px);
 }
 
 .btn-multiline span {
@@ -255,38 +255,38 @@ button:focus-visible {
 
 .toolbar-divider {
   width: 1px;
-  height: 22px;
+  height: 26px;
   background: var(--border);
   flex-shrink: 0;
-  margin: 0 2px;
+  margin: 0 clamp(2px, 0.3vw, 5px);
 }
 
 .toolbar-group {
   display: inline-flex;
   align-items: center;
-  gap: 3px;
+  gap: clamp(4px, 0.5vw, 7px);
   position: relative;
 }
 
 .toolbar-group-label {
-  font-size: 8px;
+  font-size: 9px;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: #556575;
+  color: #64748b;
   font-weight: 700;
-  margin-right: 1px;
+  margin-right: 2px;
   user-select: none;
 }
 
 .connection-status {
   display: inline-flex;
   align-items: center;
-  padding: 4px 10px;
-  border-radius: 16px;
+  padding: 6px 14px;
+  border-radius: 18px;
   background: rgba(16, 21, 27, 0.85);
   border: 1px solid rgba(255, 255, 255, 0.08);
   color: #7f8b97;
-  font-size: 11px;
+  font-size: 11.5px;
   font-weight: 600;
   white-space: nowrap;
   flex-shrink: 0;
@@ -302,9 +302,9 @@ button:focus-visible {
 
 .status-dot {
   display: inline-block;
-  width: 6px;
-  height: 6px;
-  margin-right: 6px;
+  width: 7px;
+  height: 7px;
+  margin-right: 7px;
   border-radius: 50%;
   background: #48515b;
   flex-shrink: 0;
@@ -1958,7 +1958,7 @@ td {
 .topbar-right {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: clamp(8px, 0.8vw, 12px);
   margin-left: auto;
   flex-shrink: 0;
 }
@@ -1966,14 +1966,14 @@ td {
 /* Botão sanduíche no topo direito para recolher/expandir detalhes */
 .sidebar-toggle-btn {
   position: static;
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   display: flex;
   align-items: center;
   justify-content: center;
   background: #10151b;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 9px;
   color: #cbd5df;
   cursor: pointer;
   flex-shrink: 0;

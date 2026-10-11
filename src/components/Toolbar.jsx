@@ -51,7 +51,7 @@ export default function Toolbar({
         <div className="toolbar-group" title="Criação de elementos do circuito">
           <span className="toolbar-group-label">Criar</span>
           <button className="btn btn-primary" onClick={onAddSubRegion} title="Adicionar uma sub-região padrão">
-            <span className="btn-multiline"><span>Sub-</span><span>região</span></span>
+            Sub-região
           </button>
           <button className="btn btn-accent" onClick={onOpenMultiHeliceModal} title="Adicionar sequência de sub-regiões de 1 rama e 2 nós">
             <span className="btn-multiline"><span>Hélice</span><span>Múltipla</span></span>
@@ -114,7 +114,7 @@ export default function Toolbar({
             disabled={!selectedNode && !selectedConnectionId}
             title={selectedConnectionId ? 'Remover conexão selecionada (Delete)' : 'Remover conexões do ponto selecionado'}
           >
-            <span className="btn-multiline"><span>Desco-</span><span>nectar</span></span>
+            Desconectar
           </button>
           <button className="btn" onClick={onOpenConnectionTable} title="Ver mapa de potenciais e copiar conexões elétricas">
             <span className="btn-multiline"><span>📊</span><span>Conexões</span></span>
@@ -155,7 +155,7 @@ export default function Toolbar({
 
         {/* Grupo: Histórico */}
         <div className="toolbar-group" title="Histórico de ações">
-          <span className="toolbar-group-label">Hist.</span>
+          <span className="toolbar-group-label">Histórico</span>
           <button
             className="btn btn-ghost"
             onClick={onUndo}
@@ -178,7 +178,7 @@ export default function Toolbar({
 
         {/* Grupo: Projeto */}
         <div className="toolbar-group" title="Arquivo do projeto (JSON)">
-          <span className="toolbar-group-label">Proj.</span>
+          <span className="toolbar-group-label">Projeto</span>
           <button
             className="btn"
             onClick={onSaveJson}
