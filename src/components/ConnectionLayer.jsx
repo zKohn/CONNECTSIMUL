@@ -65,7 +65,7 @@ export default function ConnectionLayer({
   }, [connections]);
 
   const computedConnections = useMemo(() => {
-    const list = [];
+    const rawItems = [];
 
     for (const connection of connections) {
       const fromSub = subMap.get(connection.fromSubRegionId);
@@ -176,68 +176,125 @@ export default function ConnectionLayer({
       const borderBX = finalPB.x + dirBX * offsetB;
       const borderBY = finalPB.y + dirBY * offsetB;
 
-      const dist = Math.hypot(borderBX - borderAX, borderBY - borderAY);
-      const curveDist = isSameSub
-        ? Math.max(55, Math.abs(finalPB.y - finalPA.y) * 0.4)
+      rawItems.push({
+        connection,
+        isSelected,
+        type,
+        pathClass,
+        glowClass,
+        endpointClass,
+        netInfo,
+        groupStyle,
+        isSameSub,
+        finalPA,
+        finalPB,
+        dirAX,
+        dirAY,
+        dirBX,
+        dirBY,
+        borderAX,
+        borderAY,
+        borderBX,
+        borderBY,
+        subKey: fromSub ? (fromSub.groupId || fromSub.id) : connection.fromSubRegionId,
+        yMin: Math.min(finalPA.y, finalPB.y),
+        yMax: Math.max(finalPA.y, finalPB.y),
+        span: Math.abs(finalPB.y - finalPA.y),
+      });
+    }
+
+    // Calcula níveis de aninhamento (rank) para conexões na mesma sub-região e mesmo lado
+    const sameSubGroups = new Map();
+    for (const item of rawItems) {
+      if (!item.isSameSub) continue;
+      const key = `${item.subKey}_${item.dirAX}`;
+      if (!sameSubGroups.has(key)) sameSubGroups.set(key, []);
+      sameSubGroups.get(key).push(item);
+    }
+
+    const sameSubRankMap = new Map();
+    for (const group of sameSubGroups.values()) {
+      const sorted = [...group].sort((a, b) => a.span - b.span || a.yMin - b.yMin);
+      for (let i = 0; i < sorted.length; i++) {
+        const cA = sorted[i];
+        let rank = 0;
+        for (let j = 0; j < i; j++) {
+          const cB = sorted[j];
+          if (Math.max(cA.yMin, cB.yMin) < Math.min(cA.yMax, cB.yMax)) {
+            rank = Math.max(rank, (sameSubRankMap.get(cB.connection.id) ?? 0) + 1);
+          }
+        }
+        sameSubRankMap.set(cA.connection.id, rank);
+      }
+    }
+
+    const list = [];
+    for (const item of rawItems) {
+      const dist = Math.hypot(item.borderBX - item.borderAX, item.borderBY - item.borderAY);
+      const rank = sameSubRankMap.get(item.connection.id) ?? 0;
+      const baseDist = Math.max(46, Math.min(75, item.span * 0.18));
+      const curveDist = item.isSameSub
+        ? baseDist + rank * 44
         : Math.max(40, Math.min(220, dist * 0.45));
 
-      const c1x = borderAX + dirAX * curveDist;
-      const c1y = borderAY + dirAY * curveDist;
-      const c2x = borderBX + dirBX * curveDist;
-      const c2y = borderBY + dirBY * curveDist;
+      const c1x = item.borderAX + item.dirAX * curveDist;
+      const c1y = item.borderAY + item.dirAY * curveDist;
+      const c2x = item.borderBX + item.dirBX * curveDist;
+      const c2y = item.borderBY + item.dirBY * curveDist;
 
       // Curva pelo espaço livre (entre as bordas externas)
-      const curvePath = `M ${borderAX} ${borderAY} C ${c1x} ${c1y}, ${c2x} ${c2y}, ${borderBX} ${borderBY}`;
+      const curvePath = `M ${item.borderAX} ${item.borderAY} C ${c1x} ${c1y}, ${c2x} ${c2y}, ${item.borderBX} ${item.borderBY}`;
 
       // Segmentos de passagem dentro da estrutura (da borda ao terminal de conexão)
-      const leadPathA = `M ${borderAX} ${borderAY} L ${finalPA.x} ${finalPA.y}`;
-      const leadPathB = `M ${borderBX} ${borderBY} L ${finalPB.x} ${finalPB.y}`;
+      const leadPathA = `M ${item.borderAX} ${item.borderAY} L ${item.finalPA.x} ${item.finalPA.y}`;
+      const leadPathB = `M ${item.borderBX} ${item.borderBY} L ${item.finalPB.x} ${item.finalPB.y}`;
 
       // Ponto médio exato da curva cúbica de Bézier (t = 0.5)
-      const midX = 0.125 * borderAX + 0.375 * c1x + 0.375 * c2x + 0.125 * borderBX;
-      const midY = 0.125 * borderAY + 0.375 * c1y + 0.375 * c2y + 0.125 * borderBY;
+      const midX = 0.125 * item.borderAX + 0.375 * c1x + 0.375 * c2x + 0.125 * item.borderBX;
+      const midY = 0.125 * item.borderAY + 0.375 * c1y + 0.375 * c2y + 0.125 * item.borderBY;
 
       let badgeLabel = '';
-      let badgeWidth = 28;
+      let badgeWidth = 20;
       let badgeBgColor = '#090e14';
       let badgeBorderColor = 'var(--cyan)';
       let badgeTextColor = '#ffffff';
       let badgeRectClass = '';
       let badgeTextClass = '';
 
-      if (type === 'earth') {
+      if (item.type === 'earth') {
         badgeLabel = '⏚';
-        badgeWidth = 24;
+        badgeWidth = 20;
         badgeBgColor = 'var(--green)';
         badgeBorderColor = 'rgba(0, 0, 0, 0.4)';
         badgeTextColor = '#05140b';
         badgeRectClass = 'connection-badge-rect--earth';
         badgeTextClass = 'connection-badge-text--earth';
-      } else if (type === 'voltage') {
+      } else if (item.type === 'voltage') {
         badgeLabel = '⚡';
-        badgeWidth = 24;
+        badgeWidth = 20;
         badgeBgColor = 'var(--amber)';
         badgeBorderColor = 'rgba(0, 0, 0, 0.4)';
-        badgeTextColor = '#1a1100';
+        badgeTextColor = '#0a0600';
         badgeRectClass = 'connection-badge-rect--voltage';
         badgeTextClass = 'connection-badge-text--voltage';
-      } else if (netInfo) {
-        badgeLabel = `#${netInfo.netIndex + 1}`;
-        badgeWidth = badgeLabel.length >= 4 ? 44 : badgeLabel.length >= 3 ? 36 : 28;
-        badgeBgColor = netInfo.stroke;
-        badgeTextColor = netInfo.textColor;
-        badgeBorderColor = netInfo.isLightColor ? 'rgba(0, 0, 0, 0.35)' : 'rgba(255, 255, 255, 0.35)';
+      } else if (item.netInfo) {
+        badgeLabel = `${item.netInfo.netIndex + 1}`;
+        const len = badgeLabel.length;
+        badgeWidth = len >= 4 ? 35 : len >= 3 ? 29 : len >= 2 ? 23 : 18;
+        badgeBgColor = item.netInfo.stroke;
+        badgeTextColor = item.netInfo.textColor;
+        badgeBorderColor = item.netInfo.isLightColor ? 'rgba(0, 0, 0, 0.35)' : 'rgba(255, 255, 255, 0.35)';
       }
 
       list.push({
-        id: connection.id,
-        isSelected,
-        pathClass,
-        glowClass,
-        endpointClass,
-        groupStyle,
-        finalPA,
-        finalPB,
+        id: item.connection.id,
+        isSelected: item.isSelected,
+        pathClass: item.pathClass,
+        glowClass: item.glowClass,
+        endpointClass: item.endpointClass,
+        groupStyle: item.groupStyle,
+        finalPA: item.finalPA,
+        finalPB: item.finalPB,
         curvePath,
         leadPathA,
         leadPathB,
@@ -250,6 +307,7 @@ export default function ConnectionLayer({
         badgeTextColor,
         badgeRectClass,
         badgeTextClass,
+        badgeIsBolt: item.type === 'voltage',
       });
     }
 
@@ -374,10 +432,10 @@ export default function ConnectionLayer({
                 <g className="connection-badge-inner">
                   <rect
                     x={-item.badgeWidth / 2}
-                    y={-11}
+                    y={-9}
                     width={item.badgeWidth}
-                    height={22}
-                    rx={5.5}
+                    height={18}
+                    rx={4}
                     className={`connection-badge-rect ${item.badgeRectClass} ${item.isSelected ? 'connection-badge-rect--selected' : ''}`}
                     style={
                       item.isSelected
@@ -385,19 +443,26 @@ export default function ConnectionLayer({
                         : { fill: item.badgeBgColor, stroke: item.badgeBorderColor }
                     }
                   />
-                  <text
-                    x={0}
-                    y={4.5}
-                    textAnchor="middle"
-                    className={`connection-badge-text ${item.badgeTextClass} ${item.isSelected ? 'connection-badge-text--selected' : ''}`}
-                    style={
-                      item.isSelected
-                        ? undefined
-                        : { fill: item.badgeTextColor }
-                    }
-                  >
-                    {item.badgeLabel}
-                  </text>
+                  {item.badgeIsBolt ? (
+                    <path
+                      d="M 0.6 -5.2 L -3.2 0.3 L -0.2 0.3 L -1.2 5.3 L 3.2 -0.3 L 0.2 -0.3 Z"
+                      className={`connection-badge-bolt ${item.isSelected ? 'connection-badge-bolt--selected' : ''}`}
+                    />
+                  ) : (
+                    <text
+                      x={0}
+                      y={3.5}
+                      textAnchor="middle"
+                      className={`connection-badge-text ${item.badgeTextClass} ${item.isSelected ? 'connection-badge-text--selected' : ''}`}
+                      style={
+                        item.isSelected
+                          ? undefined
+                          : { fill: item.badgeTextColor }
+                      }
+                    >
+                      {item.badgeLabel}
+                    </text>
+                  )}
                 </g>
               </g>
             )}

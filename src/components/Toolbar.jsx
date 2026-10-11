@@ -17,6 +17,7 @@ export default function Toolbar({
   selectedConnectionId,
   onOpenConnectionTable,
   onOpenVoltageTable,
+  onOpenMainPointsTable,
   onUndo,
   onRedo,
   canUndo,
@@ -125,6 +126,14 @@ export default function Toolbar({
             style={{ borderColor: 'rgba(255, 200, 87, 0.4)', background: 'rgba(255, 200, 87, 0.08)', color: 'var(--amber)' }}
           >
             <span>📊</span> Tensão
+          </button>
+          <button
+            className="btn"
+            onClick={onOpenMainPointsTable}
+            title="Ver tabela de relações entre pares de pontos principais (N1 × N2)"
+            style={{ borderColor: 'rgba(69, 214, 255, 0.4)', background: 'rgba(69, 214, 255, 0.08)', color: 'var(--cyan)' }}
+          >
+            <span>📊</span> Pontos Principais
           </button>
           <button
             className={`btn ${nodeNumberingDirection === 'top-to-bottom' ? 'btn-numbering-active' : ''}`}

@@ -543,7 +543,7 @@ button:focus-visible {
 
 .connection-badge-text {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 11.5px;
+  font-size: 10px;
   font-weight: 800;
   letter-spacing: -0.2px;
   pointer-events: none;
@@ -552,18 +552,26 @@ button:focus-visible {
 }
 
 .connection-badge-text--earth {
-  font-size: 13.5px;
+  font-size: 11.5px;
   font-weight: 900;
 }
 
 .connection-badge-text--voltage {
-  font-size: 12.5px;
+  font-size: 11px;
   font-weight: 900;
+  fill: #000000;
+}
+
+.connection-badge-bolt {
+  fill: #0a0600;
+  pointer-events: none;
+  filter: drop-shadow(0 0.5px 1px rgba(0, 0, 0, 0.4));
+  transition: fill .15s ease;
 }
 
 /* Hover no grupo da conexão destaca a badge */
 .connection-group:hover .connection-badge-inner {
-  transform: scale(1.18);
+  transform: scale(1.15);
 }
 
 .connection-group:hover .connection-badge-rect {
@@ -582,6 +590,10 @@ button:focus-visible {
 .connection-group--selected .connection-badge-text {
   fill: #080d14 !important;
   font-weight: 900 !important;
+}
+
+.connection-group--selected .connection-badge-bolt {
+  fill: #080d14 !important;
 }
 
 @keyframes connectionDash {
@@ -1229,6 +1241,103 @@ td {
   border-top: 1px solid var(--border);
   color: #687580;
   font-size: 9px;
+}
+
+/* ─── Painel de Pontos Principais ─── */
+.main-points-panel {
+  padding: 14px 20px;
+  background: rgba(14, 20, 27, 0.7);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.main-points-input-row {
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+}
+
+.main-points-shortcuts {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.shortcut-chip {
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-family: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #c8d1d9;
+  transition: all 0.15s ease;
+}
+
+.shortcut-chip:hover {
+  background: rgba(69, 214, 255, 0.12);
+  border-color: rgba(69, 214, 255, 0.4);
+  color: var(--cyan);
+}
+
+.shortcut-chip--danger:hover {
+  background: rgba(244, 63, 94, 0.15);
+  border-color: rgba(244, 63, 94, 0.4);
+  color: #f43f5e;
+}
+
+.main-points-available {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.points-chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  max-height: 84px;
+  overflow-y: auto;
+  padding: 4px;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+}
+
+.point-toggle-chip {
+  min-width: 28px;
+  height: 24px;
+  padding: 0 6px;
+  border-radius: 5px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #8b98a5;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.point-toggle-chip:hover {
+  background: rgba(69, 214, 255, 0.15);
+  border-color: rgba(69, 214, 255, 0.5);
+  color: #ffffff;
+}
+
+.point-toggle-chip--active {
+  background: rgba(69, 214, 255, 0.22);
+  border-color: var(--cyan);
+  color: var(--cyan);
+  box-shadow: 0 0 6px rgba(69, 214, 255, 0.3);
 }
 
 /* ─── Sub-Region Header Actions ─── */

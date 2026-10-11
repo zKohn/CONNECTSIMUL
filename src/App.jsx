@@ -17,6 +17,7 @@ import {
 
 
 import VoltageTable from './components/VoltageTable';
+import MainPointsTable from './components/MainPointsTable';
 import VoltageSourceModal from './components/VoltageSourceModal';
 import SubRegionDetail from './components/SubRegionDetail';
 import MultiHeliceModal from './components/MultiHeliceModal';
@@ -88,6 +89,8 @@ export default function App() {
   const [selectedNode, setSelectedNode] = useState(null);
   const [showConnectionTable, setShowConnectionTable] = useState(false);
   const [showVoltageTable, setShowVoltageTable] = useState(false);
+  const [showMainPointsTable, setShowMainPointsTable] = useState(false);
+  const [mainPoints, setMainPoints] = useState([1, 2, 3, 4]);
   const [showMultiHeliceModal, setShowMultiHeliceModal] = useState(false);
   const [showBatchModal, setShowBatchModal] = useState(false);
   const [notice, setNotice] = useState(null);
@@ -99,6 +102,12 @@ export default function App() {
     () => buildGlobalNumberMap(subRegions, nodeNumberingDirection),
     [subRegions, nodeNumberingDirection]
   );
+
+  const availableCircuitNumbers = useMemo(() => {
+    return Array.from(new Set(globalNumbers.values()))
+      .filter((n) => typeof n === 'number' && Number.isInteger(n) && n > 0)
+      .sort((a, b) => a - b);
+  }, [globalNumbers]);
 
   const globalBranches = useMemo(
     () => buildGlobalBranchMap(subRegions),
@@ -1172,6 +1181,7 @@ export default function App() {
       nodeNumberingDirection,
       subRegions,
       connections,
+      mainPoints,
       voltageConfig: {
         ...voltageConfig,
         groundedNodeIds: groundedSubNodeIds,
@@ -1231,6 +1241,10 @@ export default function App() {
           nodeNumberingDirection: data.nodeNumberingDirection || 'bottom-to-top',
         });
 
+        if (Array.isArray(data.mainPoints)) {
+          setMainPoints(data.mainPoints);
+        }
+
         setSelectedNode(null);
         setSelectedSubRegionId(null);
         setNotice(`Projeto importado com sucesso: ${newSubs.length} sub-regiões, ${newConns.length} conexões.`);
@@ -1279,6 +1293,7 @@ export default function App() {
         selectedConnectionId={selectedConnectionId}
         onOpenConnectionTable={() => setShowConnectionTable(true)}
         onOpenVoltageTable={() => setShowVoltageTable(true)}
+        onOpenMainPointsTable={() => setShowMainPointsTable(true)}
         onUndo={undo}
         onRedo={redo}
         canUndo={canUndo}
@@ -1365,6 +1380,15 @@ export default function App() {
           globalNumbers={globalNumbers}
           nodes={allNodes}
           onClose={() => setShowVoltageTable(false)}
+        />
+      )}
+
+      {showMainPointsTable && (
+        <MainPointsTable
+          points={mainPoints}
+          availableNumbers={availableCircuitNumbers}
+          onUpdatePoints={setMainPoints}
+          onClose={() => setShowMainPointsTable(false)}
         />
       )}
 

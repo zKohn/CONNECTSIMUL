@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { buildSubRegionNodes } from '../model/electricalModel';
+import { buildSubRegionNodes, getMultiHeliceExternalNodes } from '../model/electricalModel';
 import NodeTerminal from './NodeTerminal';
 
 const WIDTH = 200;
@@ -15,7 +15,7 @@ export function getMultiHeliceGroupHeight() {
   return HEADER_HEIGHT + bodyHeight + FOOTER_HEIGHT;
 }
 
-export { getMultiHeliceExternalNodes } from '../model/electricalModel';
+export { getMultiHeliceExternalNodes };
 
 export function getMultiHelicePortPoint(groupSubs, nodeNumber, connections = [], nodeId = null) {
   if (!groupSubs || groupSubs.length === 0) return null;
