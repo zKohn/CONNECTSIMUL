@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
+import { useDraggableModal } from '../hooks/useDraggableModal';
 
 export default function ConnectionTable({ rows, onClose }) {
   const maxColumns = Math.max(1, ...rows.map((row) => row.points.length));
   const [copied, setCopied] = useState(false);
+  const { headerProps, modalProps, overlayClassName, handleOverlayClick } = useDraggableModal({ onClose });
 
   function handleCopy() {
     if (rows.length === 0) return;
@@ -45,9 +47,9 @@ export default function ConnectionTable({ rows, onClose }) {
   }
 
   return (
-    <div className="table-overlay" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <section className="table-modal">
-        <div className="table-header">
+    <div className={`table-overlay ${overlayClassName}`} onClick={handleOverlayClick}>
+      <section className={`table-modal ${modalProps.className}`} ref={modalProps.ref} style={modalProps.style}>
+        <div className="table-header draggable-header" {...headerProps}>
           <div>
             <span className="eyebrow">MAPA DE POTENCIAIS</span>
             <h2>Conexões elétricas</h2>

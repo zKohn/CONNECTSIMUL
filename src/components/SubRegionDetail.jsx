@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { buildSubRegionNodes, getVisibleNodes, isCenterNode, MAX_OPENINGS } from '../model/electricalModel';
+import { useDraggableModal } from '../hooks/useDraggableModal';
 
 const NODE_SPACING = 30;
 const TOP_PADDING = 28;
@@ -16,6 +17,7 @@ export default function SubRegionDetail({
   onShowAllNodes,
   onClose,
 }) {
+  const { headerProps, modalProps, overlayClassName, handleOverlayClick } = useDraggableModal({ onClose });
   const nodes = useMemo(() => buildSubRegionNodes(subRegion), [subRegion]);
 
   const visibleNodeIds = useMemo(() => {
@@ -94,9 +96,14 @@ export default function SubRegionDetail({
   );
 
   return (
-    <div className="detail-overlay" onClick={onClose}>
-      <section className="detail-modal" onClick={(e) => e.stopPropagation()}>
-        <div className="detail-header">
+    <div className={`detail-overlay ${overlayClassName}`} onClick={handleOverlayClick}>
+      <section
+        className={`detail-modal ${modalProps.className}`}
+        ref={modalProps.ref}
+        style={modalProps.style}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="detail-header draggable-header" {...headerProps}>
           <div>
             <span className="eyebrow">DETALHES DA SUB-REGIÃO</span>
             <h2>{subRegion.name}</h2>

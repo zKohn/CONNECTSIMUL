@@ -1,6 +1,7 @@
 import React, { useMemo, useRef } from 'react';
 import { buildSubRegionNodes } from '../model/electricalModel';
 import { getMultiHeliceExternalNodes } from './MultiHeliceGroup';
+import { useDraggableModal } from '../hooks/useDraggableModal';
 
 const SUB_WIDTH = 140;
 const SUB_GAP = 30;
@@ -15,6 +16,7 @@ export default function MultiHeliceDetail({
   connections,
   onClose,
 }) {
+  const { headerProps, modalProps, overlayClassName, handleOverlayClick } = useDraggableModal({ onClose });
   const containerRef = useRef(null);
 
   const groupName = useMemo(() => {
@@ -81,13 +83,21 @@ export default function MultiHeliceDetail({
   }, [subs]);
 
   return (
-    <div className="detail-overlay" onClick={onClose}>
+    <div className={`detail-overlay ${overlayClassName}`} onClick={handleOverlayClick}>
       <section
-        className="detail-modal"
-        style={{ width: '92vw', maxWidth: '1100px', maxHeight: '88vh', display: 'flex', flexDirection: 'column' }}
+        className={`detail-modal ${modalProps.className}`}
+        ref={modalProps.ref}
+        style={{
+          width: '92vw',
+          maxWidth: '1100px',
+          maxHeight: '88vh',
+          display: 'flex',
+          flexDirection: 'column',
+          ...modalProps.style,
+        }}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="detail-header">
+        <div className="detail-header draggable-header" {...headerProps}>
           <div>
             <span className="eyebrow" style={{ color: 'var(--green)' }}>DETALHES DA HÉLICE MÚLTIPLA</span>
             <h2>{groupName}</h2>

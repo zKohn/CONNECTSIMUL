@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
+import { useDraggableModal } from '../hooks/useDraggableModal';
 
 export default function VoltageTable({ config, globalNumbers, nodes = [], onClose }) {
   const { appliedNodeId, voltageValue, groundedNodeIds = [] } = config || {};
   const [copied, setCopied] = useState(false);
+  const { headerProps, modalProps, overlayClassName, handleOverlayClick } = useDraggableModal({ onClose });
 
   const formatNode = (nodeId) => {
     if (!nodeId) return '—';
@@ -63,9 +65,9 @@ export default function VoltageTable({ config, globalNumbers, nodes = [], onClos
   }
 
   return (
-    <div className="table-overlay" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <section className="table-modal">
-        <div className="table-header">
+    <div className={`table-overlay ${overlayClassName}`} onClick={handleOverlayClick}>
+      <section className={`table-modal ${modalProps.className}`} ref={modalProps.ref} style={modalProps.style}>
+        <div className="table-header draggable-header" {...headerProps}>
           <div>
             <span className="eyebrow">CONFIGURAÇÃO DE TENSÃO</span>
             <h2>Fonte de Tensão e Referência (Terra)</h2>

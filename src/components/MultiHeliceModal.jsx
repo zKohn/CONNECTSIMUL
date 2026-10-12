@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
+import { useDraggableModal } from '../hooks/useDraggableModal';
 
 export default function MultiHeliceModal({ onClose, onCreate }) {
   const [count, setCount] = useState(8);
   const [prefix, setPrefix] = useState('HÉLICE');
   const [topPolarity, setTopPolarity] = useState('+');
+  const { headerProps, modalProps, overlayClassName, handleOverlayClick } = useDraggableModal({ onClose });
 
   function handleSubmit(e) {
     e.preventDefault();
@@ -13,9 +15,13 @@ export default function MultiHeliceModal({ onClose, onCreate }) {
   }
 
   return (
-    <div className="table-overlay">
-      <section className="table-modal multi-helice-modal" style={{ maxWidth: '460px' }}>
-        <div className="table-header">
+    <div className={`table-overlay ${overlayClassName}`} onClick={handleOverlayClick}>
+      <section
+        className={`table-modal multi-helice-modal ${modalProps.className}`}
+        ref={modalProps.ref}
+        style={{ maxWidth: '460px', ...modalProps.style }}
+      >
+        <div className="table-header draggable-header" {...headerProps}>
           <div>
             <span className="eyebrow">NOVA SUB-REGIÃO</span>
             <h2>Hélice Múltipla</h2>

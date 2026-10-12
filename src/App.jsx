@@ -7,6 +7,8 @@ import {
   createSubRegion,
   toggleOpening,
   buildSubRegionNodes,
+  getVisibleNodes,
+  getMultiHeliceExternalNodes,
 } from './model/electricalModel';
 import { buildGlobalNumberMap, buildGlobalBranchMap } from './model/nodeNumbering';
 import {
@@ -90,7 +92,7 @@ export default function App() {
   const [showConnectionTable, setShowConnectionTable] = useState(false);
   const [showVoltageTable, setShowVoltageTable] = useState(false);
   const [showMainPointsTable, setShowMainPointsTable] = useState(false);
-  const [mainPoints, setMainPoints] = useState([1, 2, 3, 4]);
+  const [mainPoints, setMainPoints] = useState(null);
   const [showMultiHeliceModal, setShowMultiHeliceModal] = useState(false);
   const [showBatchModal, setShowBatchModal] = useState(false);
   const [notice, setNotice] = useState(null);
@@ -108,6 +110,48 @@ export default function App() {
       .filter((n) => typeof n === 'number' && Number.isInteger(n) && n > 0)
       .sort((a, b) => a - b);
   }, [globalNumbers]);
+
+  // Pontos/nós atualmente visíveis (aparecendo na tela) no circuito
+  const visibleCircuitNumbers = useMemo(() => {
+    const singleSubs = subRegions.filter((s) => !s.groupId);
+    const groupSubsMap = new Map();
+    for (const sub of subRegions) {
+      if (sub.groupId) {
+        if (!groupSubsMap.has(sub.groupId)) groupSubsMap.set(sub.groupId, []);
+        groupSubsMap.get(sub.groupId).push(sub);
+      }
+    }
+
+    const visibleNodeIds = new Set();
+
+    // Nós visíveis das sub-regiões padrão
+    for (const sub of singleSubs) {
+      const vNodes = getVisibleNodes(sub, connections);
+      vNodes.forEach((n) => visibleNodeIds.add(n.id));
+    }
+
+    // Nós externos visíveis dos grupos de hélices múltiplas
+    for (const subs of groupSubsMap.values()) {
+      const extNodes = getMultiHeliceExternalNodes(subs, connections);
+      extNodes.forEach((n) => visibleNodeIds.add(n.id));
+    }
+
+    const nums = new Set();
+    for (const id of visibleNodeIds) {
+      const gNum = globalNumbers.get(id);
+      if (gNum != null && Number.isInteger(gNum) && gNum > 0) {
+        nums.add(gNum);
+      }
+    }
+
+    return Array.from(nums).sort((a, b) => a - b);
+  }, [subRegions, connections, globalNumbers]);
+
+  const effectiveMainPoints = useMemo(() => {
+    if (mainPoints && mainPoints.length > 0) return mainPoints;
+    if (visibleCircuitNumbers && visibleCircuitNumbers.length > 0) return visibleCircuitNumbers;
+    return [1, 2, 3, 4];
+  }, [mainPoints, visibleCircuitNumbers]);
 
   const globalBranches = useMemo(
     () => buildGlobalBranchMap(subRegions),
@@ -1385,8 +1429,9 @@ export default function App() {
 
       {showMainPointsTable && (
         <MainPointsTable
-          points={mainPoints}
+          points={effectiveMainPoints}
           availableNumbers={availableCircuitNumbers}
+          visibleNumbers={visibleCircuitNumbers}
           onUpdatePoints={setMainPoints}
           onClose={() => setShowMainPointsTable(false)}
         />

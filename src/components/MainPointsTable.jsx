@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { useDraggableModal } from '../hooks/useDraggableModal';
 
 /**
  * Converte uma string com números, listas ou intervalos em um array de números inteiros positivos ordenados.
@@ -55,20 +56,34 @@ export function generatePointCombinations(points) {
 }
 
 export default function MainPointsTable({
-  points = [1, 2, 3, 4],
+  points,
   availableNumbers = [],
+  visibleNumbers = [],
   onUpdatePoints,
   onClose,
 }) {
   const [copied, setCopied] = useState(false);
-  const [inputVal, setInputVal] = useState(() => (points && points.length > 0 ? points.join(' ') : '1 2 3 4'));
+  const { headerProps, modalProps, overlayClassName, handleOverlayClick } = useDraggableModal({ onClose });
+
+  // Pontos de exemplo baseados em todos os pontos visíveis no momento no circuito
+  const examplePoints = useMemo(() => {
+    if (visibleNumbers && visibleNumbers.length > 0) return visibleNumbers;
+    return [1, 2, 3, 4];
+  }, [visibleNumbers]);
 
   // Conjunto de pontos ativos
   const activePoints = useMemo(() => {
-    return Array.from(new Set(points.map(Number)))
+    const raw = (points !== undefined && points !== null && points.length > 0) ? points : examplePoints;
+    return Array.from(new Set(raw.map(Number)))
       .filter((n) => Number.isInteger(n) && n > 0)
       .sort((a, b) => a - b);
-  }, [points]);
+  }, [points, examplePoints]);
+
+  const [inputVal, setInputVal] = useState(() => activePoints.join(' '));
+
+  React.useEffect(() => {
+    setInputVal(activePoints.join(' '));
+  }, [activePoints]);
 
   // Combinações geradas (N1 x N2)
   const rows = useMemo(() => generatePointCombinations(activePoints), [activePoints]);
@@ -113,9 +128,8 @@ export default function MainPointsTable({
   }
 
   function handleLoadExample() {
-    const example = [1, 2, 3, 4];
-    onUpdatePoints(example);
-    setInputVal(example.join(' '));
+    onUpdatePoints(examplePoints);
+    setInputVal(examplePoints.join(' '));
   }
 
   function handleCopy() {
@@ -158,9 +172,13 @@ export default function MainPointsTable({
   }
 
   return (
-    <div className="table-overlay" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <section className="table-modal main-points-modal" style={{ maxWidth: '640px' }}>
-        <div className="table-header">
+    <div className={`table-overlay ${overlayClassName}`} onClick={handleOverlayClick}>
+      <section
+        className={`table-modal main-points-modal ${modalProps.className}`}
+        ref={modalProps.ref}
+        style={{ maxWidth: '640px', ...modalProps.style }}
+      >
+        <div className="table-header draggable-header" {...headerProps}>
           <div>
             <span className="eyebrow" style={{ color: 'var(--cyan)' }}>RELAÇÕES ENTRE PONTOS</span>
             <h2>Pontos Principais (N1 × N2)</h2>
@@ -219,9 +237,9 @@ export default function MainPointsTable({
               type="button"
               className="shortcut-chip"
               onClick={handleLoadExample}
-              title="Carregar pontos 1, 2, 3 e 4 do exemplo"
+              title={`Carregar todos os pontos visíveis no circuito no momento (${examplePoints.join(', ')})`}
             >
-              Exemplo (1 a 4)
+              Exemplo ({examplePoints.length <= 4 ? examplePoints.join(', ') : `${examplePoints.length} visíveis`})
             </button>
             {availableNumbers && availableNumbers.length > 0 && (
               <button

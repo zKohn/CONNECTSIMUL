@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-
+import { useDraggableModal } from '../hooks/useDraggableModal';
 
 export default function VoltageSourceModal({ isOpen, onClose, onSave, nodes }) {
   const [selectedNode, setSelectedNode] = useState('');
   const [voltage, setVoltage] = useState('');
   const [grounded, setGrounded] = useState([]);
+  const { headerProps, modalProps, overlayClassName, handleOverlayClick } = useDraggableModal({ onClose });
 
   // Reset when opened
   useEffect(() => {
@@ -31,9 +32,12 @@ export default function VoltageSourceModal({ isOpen, onClose, onSave, nodes }) {
   };
 
   return (
-    <div className="modal-backdrop">
-      <div className="modal-content">
-        <h2>Configurar Fonte de Tensão</h2>
+    <div className={`modal-backdrop ${overlayClassName}`} onClick={handleOverlayClick}>
+      <div className={`modal-content ${modalProps.className}`} ref={modalProps.ref} style={modalProps.style}>
+        <div className="draggable-header" {...headerProps} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', cursor: 'grab' }}>
+          <h2 style={{ margin: 0 }}>Configurar Fonte de Tensão</h2>
+          <button type="button" className="icon-btn" onClick={onClose} aria-label="Fechar" style={{ background: 'transparent', border: 'none', color: '#94a3b8', fontSize: '18px', cursor: 'pointer' }}>×</button>
+        </div>
         <form onSubmit={handleSubmit} className="voltage-form">
           <label>
             Nó Aplicado:

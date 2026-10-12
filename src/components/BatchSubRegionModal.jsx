@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
+import { useDraggableModal } from '../hooks/useDraggableModal';
 
 export default function BatchSubRegionModal({ onClose, onCreateBatch }) {
+  const { headerProps, modalProps, overlayClassName, handleOverlayClick } = useDraggableModal({ onClose });
   const [rows, setRows] = useState([
     { id: 1, type: 'sub', count: 4, topPolarity: '+', name: '' },
     { id: 2, type: 'sub', count: 4, topPolarity: '+', name: '' },
@@ -56,9 +58,13 @@ export default function BatchSubRegionModal({ onClose, onCreateBatch }) {
   }
 
   return (
-    <div className="table-overlay">
-      <section className="table-modal" style={{ maxWidth: '780px', width: '95vw' }}>
-        <div className="table-header">
+    <div className={`table-overlay ${overlayClassName}`} onClick={handleOverlayClick}>
+      <section
+        className={`table-modal ${modalProps.className}`}
+        ref={modalProps.ref}
+        style={{ maxWidth: '780px', width: '95vw', ...modalProps.style }}
+      >
+        <div className="table-header draggable-header" {...headerProps}>
           <div>
             <span className="eyebrow" style={{ color: 'var(--cyan)' }}>GERAÇÃO EM LOTE</span>
             <h2>Tabela de Criação Rápida de Subs</h2>
