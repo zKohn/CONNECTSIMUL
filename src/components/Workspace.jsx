@@ -6,6 +6,7 @@ import VoltageSourceBlock from './VoltageSourceBlock';
 import EarthBlock from './EarthBlock';
 import { buildSubRegionNodes } from '../model/electricalModel';
 import { buildGlobalNumberMap } from '../model/nodeNumbering';
+import { hasVoltageEarthShortCircuit } from '../model/equipotentialColors';
 
 export default function Workspace({
   subRegions,
@@ -184,6 +185,11 @@ export default function Workspace({
     return map;
   }, [connections]);
 
+  const hasShortCircuit = useMemo(
+    () => hasVoltageEarthShortCircuit(connections),
+    [connections]
+  );
+
   return (
     <main
       className="workspace"
@@ -210,6 +216,13 @@ export default function Workspace({
         <span className="hint-separator">•</span>
         <span className="hint-key">DEL / D</span> apagar
       </div>
+
+      {hasShortCircuit && (
+        <div className="workspace-short-circuit-banner">
+          <span className="banner-icon">⚠️</span>
+          <span>ERRO: Curto-circuito entre fonte de tensão e terra</span>
+        </div>
+      )}
 
       <ConnectionLayer
         subRegions={subRegions}
@@ -267,6 +280,7 @@ export default function Workspace({
           onSelect={onSelectSubRegion}
           onUpdatePosition={onUpdateVoltageSourcePosition}
           onCommitPosition={onCommitVoltagePosition}
+          onUpdateVoltageValue={onUpdateVoltageValue}
         />
       )}
 

@@ -16,6 +16,7 @@ import {
   validateConnectivity,
   getElectricalGroups,
 } from './model/connectivity';
+import { hasVoltageEarthShortCircuit } from './model/equipotentialColors';
 
 
 import VoltageTable from './components/VoltageTable';
@@ -903,7 +904,11 @@ export default function App() {
     }));
     setSelectedNode(null);
 
-    if (fromIsSpecial || toIsSpecial) {
+    const isShortCircuit = hasVoltageEarthShortCircuit(newConnections);
+
+    if (isShortCircuit) {
+      setNotice('ERRO: Curto-circuito entre fonte de tensão e terra');
+    } else if (fromIsSpecial || toIsSpecial) {
       if (selectedNode.subRegionId === 'voltage-source' || node.subRegionId === 'voltage-source') {
         setNotice('Tensão conectada ao ponto com sucesso.');
       } else {
@@ -1401,8 +1406,8 @@ export default function App() {
       </div>
 
       {notice && (
-        <div className="toast">
-          <span className="toast-icon">●</span>
+        <div className={`toast ${notice.startsWith('ERRO') ? 'toast--error' : ''}`}>
+          <span className="toast-icon">{notice.startsWith('ERRO') ? '⚠️' : '●'}</span>
           {notice}
           <button type="button" onClick={() => setNotice(null)}>×</button>
         </div>

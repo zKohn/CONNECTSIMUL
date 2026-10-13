@@ -193,26 +193,143 @@ export function getEquipotentialNetColor(netIndex) {
 }
 
 /**
- * Analisa as conexões do simulador e calcula o mapa de redes equipotenciais.
- * Conexões que envolvem Terra ('earth*') ou Fonte de Tensão ('voltage-source')
- * NÃO entram no cálculo e mantêm suas cores originais sem alteração.
+ * Classifica todas as conexões em:
+ * 1. 'voltage': conectada diretamente ou indiretamente à fonte de tensão (Prioridade 1)
+ * 2. 'earth': conectada diretamente ou indiretamente à terra (Prioridade 2)
+ * 3. 'node': outras conexões (Prioridade 3)
  *
  * @param {Array} connections - Lista de conexões no circuito
+ * @returns {Map<string, 'voltage' | 'earth' | 'node'>} Mapa de connectionId -> tipo de conexão
+ */
+export function classifyConnections(connections = []) {
+  const isVoltageConnection = (conn) =>
+    conn.fromSubRegionId === 'voltage-source' ||
+    conn.toSubRegionId === 'voltage-source' ||
+    conn.from === 'voltage-source-terminal' ||
+    conn.to === 'voltage-source-terminal';
+
+  const isEarthConnection = (conn) =>
+    (typeof conn.fromSubRegionId === 'string' && (conn.fromSubRegionId.startsWith('earth') || conn.fromSubRegionId.includes('earth'))) ||
+    (typeof conn.toSubRegionId === 'string' && (conn.toSubRegionId.startsWith('earth') || conn.toSubRegionId.includes('earth'))) ||
+    (typeof conn.from === 'string' && conn.from.startsWith('earth')) ||
+    (typeof conn.to === 'string' && conn.to.startsWith('earth'));
+
+  const uf = createUnionFind();
+
+  for (const c of connections) {
+    if (c && c.from && c.to) {
+      uf.union(c.from, c.to);
+    }
+  }
+
+  // Identifica quais componentes conectados (raízes) possuem fonte de tensão ou terra
+  const voltageRoots = new Set();
+  const earthRoots = new Set();
+
+  for (const c of connections) {
+    if (!c) continue;
+    if (isVoltageConnection(c)) {
+      if (c.from) voltageRoots.add(uf.find(c.from));
+      if (c.to) voltageRoots.add(uf.find(c.to));
+    }
+    if (isEarthConnection(c)) {
+      if (c.from) earthRoots.add(uf.find(c.from));
+      if (c.to) earthRoots.add(uf.find(c.to));
+    }
+  }
+
+  // Atribui o tipo para cada conexão respeitando estritamente a prioridade:
+  // 1. Fonte de tensão
+  // 2. Fonte de terra
+  // 3. Outras conexões
+  const classificationMap = new Map();
+
+  for (const c of connections) {
+    if (!c) continue;
+    const root = c.from ? uf.find(c.from) : (c.to ? uf.find(c.to) : null);
+    if (root && voltageRoots.has(root)) {
+      classificationMap.set(c.id, 'voltage');
+    } else if (root && earthRoots.has(root)) {
+      classificationMap.set(c.id, 'earth');
+    } else {
+      classificationMap.set(c.id, 'node');
+    }
+  }
+
+  return classificationMap;
+}
+
+/**
+ * Detecta se existe conexão direta ou indireta (curto-circuito) entre
+ * a fonte de tensão e qualquer bloco de terra.
+ *
+ * @param {Array} connections - Lista de conexões no circuito
+ * @returns {boolean} Verdadeiro se houver curto-circuito entre fonte e terra
+ */
+export function hasVoltageEarthShortCircuit(connections = []) {
+  const isVoltageConnection = (conn) =>
+    conn.fromSubRegionId === 'voltage-source' ||
+    conn.toSubRegionId === 'voltage-source' ||
+    conn.from === 'voltage-source-terminal' ||
+    conn.to === 'voltage-source-terminal';
+
+  const isEarthConnection = (conn) =>
+    (typeof conn.fromSubRegionId === 'string' && (conn.fromSubRegionId.startsWith('earth') || conn.fromSubRegionId.includes('earth'))) ||
+    (typeof conn.toSubRegionId === 'string' && (conn.toSubRegionId.startsWith('earth') || conn.toSubRegionId.includes('earth'))) ||
+    (typeof conn.from === 'string' && conn.from.startsWith('earth')) ||
+    (typeof conn.to === 'string' && conn.to.startsWith('earth'));
+
+  const uf = createUnionFind();
+
+  for (const c of connections) {
+    if (c && c.from && c.to) {
+      uf.union(c.from, c.to);
+    }
+  }
+
+  const voltageRoots = new Set();
+  const earthRoots = new Set();
+
+  for (const c of connections) {
+    if (!c) continue;
+    if (isVoltageConnection(c)) {
+      if (c.from) voltageRoots.add(uf.find(c.from));
+      if (c.to) voltageRoots.add(uf.find(c.to));
+    }
+    if (isEarthConnection(c)) {
+      if (c.from) earthRoots.add(uf.find(c.from));
+      if (c.to) earthRoots.add(uf.find(c.to));
+    }
+  }
+
+  for (const vr of voltageRoots) {
+    if (earthRoots.has(vr)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+/**
+ * Analisa as conexões do simulador e calcula o mapa de redes equipotenciais.
+ * Conexões que pertencem a redes de Tensão ou Terra (diretas ou indiretas)
+ * NÃO entram no cálculo e mantêm suas cores e tags exclusivas.
+ *
+ * @param {Array} connections - Lista de conexões no circuito
+ * @param {Map<string, string>} [classificationMap] - Mapa pré-calculado de tipos de conexão
  * @returns {Map<string, Object>} Mapa de connectionId -> dados da cor da rede
  */
-export function buildEquipotentialNetMap(connections = []) {
-  const isEarth = (id) => typeof id === 'string' && (id.startsWith('earth') || id.includes('earth'));
-  const isVoltage = (id) => id === 'voltage-source';
+export function buildEquipotentialNetMap(connections = [], classificationMap = null) {
+  const classMap = classificationMap || classifyConnections(connections);
 
-  const nodeConnections = connections.filter((c) => {
-    const hasEarth = isEarth(c.fromSubRegionId) || isEarth(c.toSubRegionId);
-    const hasVoltage = isVoltage(c.fromSubRegionId) || isVoltage(c.toSubRegionId);
-    return !hasEarth && !hasVoltage;
-  });
+  const nodeConnections = connections.filter((c) => classMap.get(c.id) === 'node');
 
   const uf = createUnionFind();
   for (const c of nodeConnections) {
-    uf.union(c.from, c.to);
+    if (c && c.from && c.to) {
+      uf.union(c.from, c.to);
+    }
   }
 
   // Agrupa os nós e mapeia cada raiz para um índice de rede determinístico

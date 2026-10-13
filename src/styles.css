@@ -1220,6 +1220,62 @@ button:focus-visible {
   cursor: pointer;
 }
 
+.toast--error {
+  border-color: rgba(239, 68, 68, 0.75) !important;
+  background: rgba(26, 11, 14, 0.97) !important;
+  color: #fecaca !important;
+  font-weight: 700 !important;
+  box-shadow: 0 4px 20px rgba(239, 68, 68, 0.35), 0 2px 8px rgba(0, 0, 0, 0.7) !important;
+}
+
+.toast--error .toast-icon {
+  color: #ef4444 !important;
+  font-size: 13px !important;
+}
+
+.toast--error button {
+  color: #fca5a5 !important;
+}
+
+/* Banner de erro de curto-circuito no topo do workspace */
+.workspace-short-circuit-banner {
+  position: absolute;
+  top: 56px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(220, 38, 38, 0.95);
+  color: #ffffff;
+  border: 1px solid rgba(254, 202, 202, 0.6);
+  box-shadow: 0 4px 18px rgba(220, 38, 38, 0.5), 0 2px 6px rgba(0, 0, 0, 0.6);
+  padding: 6px 16px;
+  border-radius: 8px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11.5px;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+  z-index: 20;
+  pointer-events: none;
+  animation: pulseShortCircuit 2s ease infinite;
+}
+
+.workspace-short-circuit-banner .banner-icon {
+  font-size: 14px;
+}
+
+@keyframes pulseShortCircuit {
+  0%, 100% {
+    transform: translateX(-50%) scale(1);
+    box-shadow: 0 4px 18px rgba(220, 38, 38, 0.5), 0 2px 6px rgba(0, 0, 0, 0.6);
+  }
+  50% {
+    transform: translateX(-50%) scale(1.02);
+    box-shadow: 0 4px 26px rgba(239, 68, 68, 0.8), 0 2px 8px rgba(0, 0, 0, 0.85);
+  }
+}
+
 .table-overlay {
   position: fixed;
   inset: 0;
@@ -1927,7 +1983,7 @@ td {
   box-shadow: 0 0 12px #fff !important;
 }
 
-/* Rótulo de tensão visível na tela inicial */
+/* Rótulo de tensão visível na tela inicial (editável) */
 .pin-voltage-badge {
   position: absolute;
   background: rgba(10, 14, 19, 0.94);
@@ -1939,11 +1995,64 @@ td {
   padding: 2px 7px;
   border-radius: 5px;
   white-space: nowrap;
-  pointer-events: none;
+  pointer-events: auto;
   user-select: none;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
   letter-spacing: 0.4px;
-  z-index: 3;
+  z-index: 5;
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+}
+
+.pin-voltage-badge:hover {
+  border-color: var(--amber);
+  background: rgba(18, 24, 32, 0.98);
+  box-shadow: 0 0 10px rgba(255, 200, 87, 0.35), 0 2px 8px rgba(0, 0, 0, 0.7);
+}
+
+.pin-voltage-badge--editing {
+  cursor: default;
+  border-color: var(--amber) !important;
+  background: rgba(15, 20, 27, 0.98) !important;
+  box-shadow: 0 0 14px rgba(255, 200, 87, 0.5), 0 2px 10px rgba(0, 0, 0, 0.8) !important;
+  padding: 1px 5px;
+}
+
+.pin-voltage-form {
+  display: inline-flex;
+  align-items: center;
+  margin: 0;
+  padding: 0;
+}
+
+.pin-voltage-input {
+  width: 44px;
+  min-width: 36px;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 200, 87, 0.5);
+  border-radius: 3px;
+  outline: none;
+  color: var(--amber);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  text-align: right;
+  padding: 1px 3px;
+  margin: 0;
+}
+
+.pin-voltage-input:focus {
+  border-color: var(--amber);
+  box-shadow: 0 0 6px rgba(255, 200, 87, 0.4);
+}
+
+.pin-voltage-unit {
+  margin-left: 4px;
+  margin-right: 1px;
+  color: var(--amber);
+  font-size: 11px;
+  font-weight: 700;
+  user-select: none;
 }
 
 .pin-voltage-badge.rot-0 {

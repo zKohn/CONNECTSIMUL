@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 
 export const VOLTAGE_SOURCE_WIDTH = 48;
 export const VOLTAGE_SOURCE_HEIGHT = 48;
@@ -53,9 +53,35 @@ export default function VoltageSourceBlock({
   onSelect,
   onUpdatePosition,
   onCommitPosition,
+  onUpdateVoltageValue,
 }) {
   const isDragging = useRef(false);
   const dragStartPos = useRef({ x: 0, y: 0 });
+  const [isEditing, setIsEditing] = useState(false);
+  const [editValue, setEditValue] = useState(voltageValue ?? '');
+  const inputRef = useRef(null);
+
+  useEffect(() => {
+    if (!isEditing) {
+      setEditValue(voltageValue ?? '');
+    }
+  }, [voltageValue, isEditing]);
+
+  useEffect(() => {
+    if (isEditing && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
+    }
+  }, [isEditing]);
+
+  const saveEdit = () => {
+    setIsEditing(false);
+    const trimmed = (editValue ?? '').trim().replace(',', '.');
+    const finalVal = trimmed === '' ? (voltageValue ?? '0') : trimmed;
+    if (onUpdateVoltageValue) {
+      onUpdateVoltageValue(finalVal);
+    }
+  };
 
   if (!source || source.enabled === false) return null;
 
@@ -159,9 +185,57 @@ export default function VoltageSourceBlock({
         </button>
       </div>
 
-      {/* Rótulo com o valor de tensão visível na tela inicial */}
-      <div className={`pin-voltage-badge rot-${normalizedRot}`}>
-        {voltageValue || '0'} kV
+      {/* Rótulo com o valor de tensão visível na tela inicial (editável ao clicar) */}
+      <div
+        className={`pin-voltage-badge rot-${normalizedRot} ${isEditing ? 'pin-voltage-badge--editing' : ''}`}
+        onPointerDown={(e) => e.stopPropagation()}
+        onMouseDown={(e) => e.stopPropagation()}
+        onClick={(e) => {
+          e.stopPropagation();
+          if (!isEditing) {
+            setIsEditing(true);
+          }
+        }}
+        title={isEditing ? 'Pressione Enter para salvar ou Esc para cancelar' : 'Clique para alterar o valor da tensão'}
+      >
+        {isEditing ? (
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              saveEdit();
+            }}
+            className="pin-voltage-form"
+            onPointerDown={(e) => e.stopPropagation()}
+            onMouseDown={(e) => e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <input
+              ref={inputRef}
+              type="text"
+              inputMode="decimal"
+              className="pin-voltage-input"
+              value={editValue}
+              onChange={(e) => setEditValue(e.target.value)}
+              onBlur={saveEdit}
+              onKeyDown={(e) => {
+                e.stopPropagation();
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  saveEdit();
+                } else if (e.key === 'Escape') {
+                  e.preventDefault();
+                  setIsEditing(false);
+                  setEditValue(voltageValue ?? '');
+                }
+              }}
+              autoFocus
+              placeholder="0"
+            />
+            <span className="pin-voltage-unit">kV</span>
+          </form>
+        ) : (
+          <span>{voltageValue || '0'} kV</span>
+        )}
       </div>
     </div>
   );

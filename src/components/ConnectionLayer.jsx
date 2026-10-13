@@ -3,7 +3,7 @@ import { getSubRegionPortPoint } from './SubRegion';
 import { getMultiHelicePortPoint, getMultiHeliceExternalNodes } from './MultiHeliceGroup';
 import { getVoltageSourcePortPoint } from './VoltageSourceBlock';
 import { getEarthPortPoint } from './EarthBlock';
-import { buildEquipotentialNetMap } from '../model/equipotentialColors';
+import { buildEquipotentialNetMap, classifyConnections } from '../model/equipotentialColors';
 
 export default function ConnectionLayer({
   subRegions,
@@ -52,17 +52,13 @@ export default function ConnectionLayer({
     return 27;
   };
 
-  const getConnectionType = (fromSubRegionId, toSubRegionId) => {
-    const isEarth = (id) => typeof id === 'string' && (id.startsWith('earth') || id.includes('earth'));
-    const isVoltage = (id) => id === 'voltage-source';
-    if (isEarth(fromSubRegionId) || isEarth(toSubRegionId)) return 'earth';
-    if (isVoltage(fromSubRegionId) || isVoltage(toSubRegionId)) return 'voltage';
-    return 'node';
-  };
+  const connectionTypesMap = useMemo(() => {
+    return classifyConnections(connections);
+  }, [connections]);
 
   const netColorMap = useMemo(() => {
-    return buildEquipotentialNetMap(connections);
-  }, [connections]);
+    return buildEquipotentialNetMap(connections, connectionTypesMap);
+  }, [connections, connectionTypesMap]);
 
   const computedConnections = useMemo(() => {
     const rawItems = [];
@@ -97,19 +93,32 @@ export default function ConnectionLayer({
       if (!a || !b) continue;
 
       const isSelected = selectedConnectionId === connection.id;
-      const type = getConnectionType(connection.fromSubRegionId, connection.toSubRegionId);
+      const type = connectionTypesMap.get(connection.id) || 'node';
       const pathClass = type === 'earth' ? 'connection-path--earth' : type === 'voltage' ? 'connection-path--voltage' : 'connection-path';
       const glowClass = type === 'earth' ? 'connection-path-glow--earth' : type === 'voltage' ? 'connection-path-glow--voltage' : 'connection-path-glow';
       const endpointClass = type === 'earth' ? 'connection-endpoint--earth' : type === 'voltage' ? 'connection-endpoint--voltage' : 'connection-endpoint';
 
       const netInfo = type === 'node' ? netColorMap.get(connection.id) : null;
-      const groupStyle = netInfo
-        ? {
-            '--conn-color': netInfo.stroke,
-            '--conn-glow': netInfo.glow,
-            '--conn-glow-selected': netInfo.glowSelected,
-          }
-        : undefined;
+      const groupStyle =
+        type === 'earth'
+          ? {
+              '--conn-color': 'var(--green)',
+              '--conn-glow': 'rgba(0, 230, 118, 0.22)',
+              '--conn-glow-selected': 'rgba(0, 230, 118, 0.65)',
+            }
+          : type === 'voltage'
+          ? {
+              '--conn-color': 'var(--amber)',
+              '--conn-glow': 'rgba(255, 200, 87, 0.22)',
+              '--conn-glow-selected': 'rgba(255, 200, 87, 0.65)',
+            }
+          : netInfo
+          ? {
+              '--conn-color': netInfo.stroke,
+              '--conn-glow': netInfo.glow,
+              '--conn-glow-selected': netInfo.glowSelected,
+            }
+          : undefined;
 
       const isSameSub = connection.fromSubRegionId === connection.toSubRegionId || isSameGroup;
 
@@ -312,7 +321,7 @@ export default function ConnectionLayer({
     }
 
     return list;
-  }, [connections, subMap, earthMap, groupSubsMap, selectedConnectionId, voltageSource, netColorMap]);
+  }, [connections, subMap, earthMap, groupSubsMap, selectedConnectionId, voltageSource, netColorMap, connectionTypesMap]);
 
   const svgStyle = width && height ? { width, height, minWidth: width } : undefined;
 
